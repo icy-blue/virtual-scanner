@@ -5,9 +5,7 @@ from typing import Tuple
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
-from knn import KNN
 
-import knn
 import trimesh
 from virtual_lidar.lidar import Lidar
 from virtual_lidar.scanner import LidarScanner

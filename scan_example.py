@@ -5,9 +5,7 @@ from typing import Tuple
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
-from knn import KNN
-
-import knn
+from tool.knn import KNN as knn
 from virtual_scanner.camera import Camera
 from virtual_scanner.scanner import CameraScanner
 
