@@ -69,45 +69,28 @@ def main():
     for item in tqdm(sorted(mesh_list)):
         mesh = o3d.io.read_triangle_mesh(item)
         center, extent = get_center_and_extent(mesh)
-        # print(center, extent)
         mesh.translate(-center)
         mesh.scale(min(0.5, 0.5 / np.max(extent)), center=[0, 0, 0])
         center, extent = get_center_and_extent(mesh)
         print(center, extent)
         pcd_all = o3d.t.geometry.PointCloud()
-        pcd_all.point['positions'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float64))
-        pcd_all.point['normals'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float64))
-        pcd_all.point['colors'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float64))
-        pcd_all.point['source'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.int32))
-        coord = o3d.geometry.TriangleMesh().create_coordinate_frame(size=np.max(extent) / 2)
-        distance_noise_std = 0.002
-        angle_noise_std = 30
+        pcd_all.point['positions'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
+        pcd_all.point['normals'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
+        pcd_all.point['colors'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
+        pcd_all.point['source'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.int16))
+        distance_noise_std = 0.005
+        angle_noise_std = 100
         for direction, camera in cameras.items():
             scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
             tri_mesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
             _points, _normals, _rays = scanner.virtual_scan(tri_mesh, use_noise=True)
-            # depth_image = scanner.virtual_scan([mesh])
-            # polar_coordinates, valid_mask = scanner.depth_to_polar_coord(depth_image)
-            # point_cloud = scanner.polar_coord_to_point_cloud(polar_coordinates, valid_mask)
-            # _points = np.asarray(point_cloud.points)
             tpcd = o3d.t.geometry.PointCloud()
-            tpcd.point['positions'] = o3d.core.Tensor(_points)
-            tpcd.point['normals'] = o3d.core.Tensor(_normals)
-            tpcd.point['colors'] = o3d.core.Tensor(_rays / 2 + 0.5)
+            tpcd.point['positions'] = o3d.core.Tensor(_points, dtype=o3d.core.Dtype.Float32)
+            tpcd.point['normals'] = o3d.core.Tensor(_normals, dtype=o3d.core.Dtype.Float32)
+            tpcd.point['colors'] = o3d.core.Tensor(_rays / 2 + 0.5, dtype=o3d.core.Dtype.Float32)
             tpcd.point['source'] = o3d.core.Tensor(np.full((_points.shape[0], 1), parse_direction(direction),
-                                                           dtype=np.int32))
-            # o3d.visualization.draw_geometries([point_cloud, mesh, coord])
+                                                           dtype=np.int16))
             pcd_all += tpcd
-
-        # sampled = mesh.sample_points_uniformly(4000000, use_triangle_normal=True)
-        # sampled = np.hstack([np.asarray(sampled.points), np.asarray(sampled.normals)])
-
-        # dists, idx = KNN.huge_point_cloud_nn(pcd_all.point['positions'].numpy(), sampled[:, :3], grid_length=0.1,
-        #                                      expand_length=0.01, patch_size=100000, verbose=False)
-        # pcd_all.point['normals'] = o3d.core.Tensor(sampled[idx, 3:6])
-        # pcd_all.point['colors'] = o3d.core.Tensor(sampled[idx, 3:6] / 2 + 0.5)
-
-        # o3d.visualization.draw_geometries([pcd_all, mesh, coord])
         basename = os.path.basename(item).split('.')[0]
         o3d.t.io.write_point_cloud(os.path.join(save_dir, basename + '.pcd'), pcd_all)
 
