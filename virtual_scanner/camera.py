@@ -28,7 +28,7 @@ class Camera:
 
         y_axis = np.cross(z_axis, x_axis)
 
-        rotation_matrix = np.vstack([x_axis, y_axis, z_axis])
+        rotation_matrix = np.vstack([x_axis, y_axis, z_axis]).T
         translation_vector = -rotation_matrix @ self.eye.reshape([-1, 1])
         extrinsic_matrix_3x4 = np.hstack([rotation_matrix, translation_vector.reshape(-1, 1)])
         extrinsic_matrix_4x4 = np.vstack([extrinsic_matrix_3x4, [0, 0, 0, 1]])

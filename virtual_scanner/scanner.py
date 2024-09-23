@@ -1,13 +1,14 @@
+import warnings
 from typing import Tuple, List
 
 import numpy as np
 import open3d as o3d
 from open3d.visualization.rendering import MaterialRecord
 
-from camera import Camera
+from .camera import Camera
 
 
-class Scanner:
+class CameraScanner:
     def __init__(self, camera: Camera):
         self.camera = camera
 
@@ -45,9 +46,11 @@ class Scanner:
         valid_mask = np.isfinite(depth_image) & (depth_image > 0)
         polar_coordinates = np.full((height, width, 3), fill_value=np.nan)
 
-        Z_c = depth_image
-        X_c = (u - width // 2) * Z_c / focal_length
-        Y_c = (v - height // 2) * Z_c / focal_length
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', RuntimeWarning)
+            Z_c = depth_image
+            X_c = (u - width // 2) * Z_c / focal_length
+            Y_c = (v - height // 2) * Z_c / focal_length
 
         r = np.sqrt(X_c ** 2 + Y_c ** 2 + Z_c ** 2)
         theta = np.arctan2(np.sqrt(X_c ** 2 + Y_c ** 2), Z_c)  # 仰角 theta
