@@ -83,6 +83,6 @@ class Lidar:
         rays_world /= np.linalg.norm(rays_world, axis=1, keepdims=True)
         
         return rays_lidar, rays_world
-
+    
     def __str__(self) -> str:
         return f"Lidar(resolution={self.resolution}, fov={self.fov}, eye={self.eye}, center={self.center}, up={self.up})"

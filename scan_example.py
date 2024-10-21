@@ -58,20 +58,20 @@ def parse_direction(direction: str) -> int:
 def main():
     resolution = (320, 240)
     fov = 60.0
-    mesh_dir = 'D:\\data\\abc_gt_test'
-    save_dir = 'D:\\data\\abc_scan_result'
-    mesh_list = glob.glob(mesh_dir + '/*.obj')
+    mesh_dir = 'D:/data/normal/meshes_data'
+    # save_dir = 'D:\\data\\abc_scan_result'
+    mesh_list = glob.glob(mesh_dir + '/**/*.obj', recursive=True)
     for item in tqdm(sorted(mesh_list)):
         mesh = o3d.io.read_triangle_mesh(item)
         center, extent = get_center_and_extent(mesh)
         # print(center, extent)
         mesh.translate(-center)
-        mesh.scale(min(0.5, 0.5 / np.max(extent)), center=[0, 0, 0])
+        mesh.scale(min(1.5, 1.5 / np.max(extent)), center=[0, 0, 0])
         center, extent = get_center_and_extent(mesh)
         print(center, extent)
         cameras = get_cameras(extent * 2, resolution, fov)
         pcd_all = o3d.t.geometry.PointCloud()
-        pcd_all.point['positions'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float64))
+        pcd_all.point['positions'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
         pcd_all.point['source'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.int32))
         coord = o3d.geometry.TriangleMesh().create_coordinate_frame(size=np.max(extent) / 2)
         for direction, camera in cameras.items():
@@ -91,14 +91,13 @@ def main():
         sampled = mesh.sample_points_uniformly(4000000, use_triangle_normal=True)
         sampled = np.hstack([np.asarray(sampled.points), np.asarray(sampled.normals)])
 
-        dists, idx = KNN.huge_point_cloud_nn(pcd_all.point['positions'].numpy(), sampled[:, :3], grid_length=0.1,
+        dists, idx = knn.huge_point_cloud_nn(pcd_all.point['positions'].numpy(), sampled[:, :3], grid_length=0.1,
                                              expand_length=0.01, patch_size=100000, verbose=False)
         pcd_all.point['normals'] = o3d.core.Tensor(sampled[idx, 3:6])
         pcd_all.point['colors'] = o3d.core.Tensor(sampled[idx, 3:6] / 2 + 0.5)
 
         # o3d.visualization.draw_geometries([pcd_all, mesh, coord])
-        basename = os.path.basename(item).split('.')[0]
-        o3d.t.io.write_point_cloud(os.path.join(save_dir, basename + '.pcd'), pcd_all)
+        o3d.t.io.write_point_cloud(item.replace('.obj', '.pcd'), pcd_all)
 
 
 if __name__ == "__main__":
