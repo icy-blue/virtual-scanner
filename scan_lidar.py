@@ -7,7 +7,7 @@ import open3d as o3d
 from tqdm import tqdm
 
 import trimesh
-from virtrual_scanner import Lidar, LidarScanner
+from virtual_scanner import Lidar, LidarScanner, PointCloudManager
 
 
 def calculate_distance(extent, direction):
@@ -58,11 +58,11 @@ def parse_direction(direction: str) -> int:
 def main():
     resolution = (0.05, 0.05)
     fov = (10., 10., 10., 10.)
-    distance_noise_std = 0.015
-    angle_noise_std = 100
+    distance_noise_std = 0.01
+    angle_noise_std = 50
     mesh_dir = 'D:/data/normal/meshes_data'
     mesh_list = glob.glob(mesh_dir + '/**/*.obj', recursive=True)
-    save_dir = 'D:/data/normal/pcd_data/distance_0.015_angle_100_fov_10'
+    save_dir = 'D:/data/normal/pcd_data/distance_0.01_angle_50_fov_10'
     os.makedirs(save_dir, exist_ok=True)
     cameras = get_lidars([10, 10, 10], resolution, fov)
     for item in tqdm(sorted(mesh_list)):
@@ -72,31 +72,22 @@ def main():
         mesh.scale(min(1.5, 1.5 / np.max(extent)), center=[0, 0, 0])
         center, extent = get_center_and_extent(mesh)
         # print(center, extent)
-        pcd_all = o3d.t.geometry.PointCloud()
-        pcd_all.point['positions'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
-        pcd_all.point['colors'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
-        pcd_all.point['normals'] = o3d.core.Tensor(np.zeros([0, 3], dtype=np.float32))
-        pcd_all.point['theta'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.float32))
-        pcd_all.point['phi'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.float32))
-        pcd_all.point['source'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.int16))
+        pcd = PointCloudManager()
         for direction, camera in cameras.items():
             scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
             tri_mesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
             _points, _normals, _rays = scanner.virtual_scan(tri_mesh, use_noise=True)
             _dots = np.sum(_rays * _normals, axis=1)
-            print(np.sum(_dots > 0.1))
+            print(np.sum(_dots > 0.1), _dots[_dots > 0.1])
             _theta, _phi = LidarScanner.direction_to_theta_phi(_rays)
-            tpcd = o3d.t.geometry.PointCloud()
-            tpcd.point['positions'] = o3d.core.Tensor(_points, dtype=o3d.core.Dtype.Float32)
-            tpcd.point['colors'] = o3d.core.Tensor(_rays / 2 + 0.5, dtype=o3d.core.Dtype.Float32)
-            tpcd.point['normals'] = o3d.core.Tensor(_normals, dtype=o3d.core.Dtype.Float32)
-            tpcd.point['theta'] = o3d.core.Tensor(_theta.reshape(-1, 1), dtype=o3d.core.Dtype.Float32)
-            tpcd.point['phi'] = o3d.core.Tensor(_phi.reshape(-1, 1), dtype=o3d.core.Dtype.Float32)
-            tpcd.point['source'] = o3d.core.Tensor(np.full((_points.shape[0], 1), parse_direction(direction),
-                                                           dtype=np.int16))
-            pcd_all += tpcd
-        o3d.t.io.write_point_cloud(f'{save_dir}/{os.path.basename(item)[:-4]}.pcd', pcd_all)
-
+            points = _points.astype(np.float32)
+            colors = (_rays / 2 + 0.5).astype(np.float32)
+            normals = _normals.astype(np.float32)
+            theta = _theta.astype(np.float32).reshape(-1, 1)
+            phi = _phi.astype(np.float32).reshape(-1, 1)
+            source = np.full((_points.shape[0], 1), parse_direction(direction), dtype=np.int32)
+            pcd.add(positions=points, colors=colors, normals=normals, theta=theta, phi=phi, source=source)
+        pcd.save(f'{save_dir}/{os.path.basename(item)[:-4]}.pcd')
 
 
 if __name__ == "__main__":
