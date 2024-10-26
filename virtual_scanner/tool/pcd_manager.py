@@ -7,25 +7,30 @@ class PointCloudManager:
         self.point_cloud = {}
 
     def add(self, **kwargs):
+        self._check_shape(kwargs)
         if len(self.point_cloud.keys()) == 0:
             for key, value in kwargs.items():
                 self.point_cloud[key] = value
             return
         assert set(self.point_cloud.keys()) == set(kwargs.keys()), "Keys of point clouds are not the same"
-        kwargs = self._reshape(kwargs)
         for key, value in kwargs.items():
             self.point_cloud[key] = np.vstack([self.point_cloud[key], value])
-
-    def _reshape(self, point_cloud: Dict[str, np.ndarray]) -> Dict[str, np.ndarray]:
+    
+    def _check_shape(self, point_cloud: Dict[str, np.ndarray]):
+        point_length = None
         for key, value in point_cloud.items():
             if len(value.shape) == 1:
                 point_cloud[key] = value.reshape(-1, 1)
+            if point_length is None:
+                point_length = value.shape[0]
+            else:
+                assert point_length == value.shape[0], "The number of points is not the same"
         return point_cloud
     
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]'):
         if len(point_clouds) == 0:
             return
-        point_clouds = [self._reshape(point_cloud) for point_cloud in point_clouds]
+        point_clouds = [self._check_shape(point_cloud) for point_cloud in point_clouds]
         if len(self.point_cloud.keys()) == 0:
             for key in point_clouds[0].keys():
                 self.point_cloud[key] = np.vstack([point_cloud[key] for point_cloud in point_clouds])
