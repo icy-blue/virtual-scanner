@@ -21,10 +21,10 @@ class Ray:
         
 
 class Lidar:
-    def __init__(self, resolution: 'Tuple[float, float]', fov: 'Tuple[float, float]', center: 'np.ndarray',
+    def __init__(self, resolution: 'Tuple[float, float]', fov: 'Tuple[float, float, float, float]', center: 'np.ndarray',
                  eye: 'np.ndarray', up: 'np.ndarray'):
         self.resolution = resolution
-        self.fov = fov
+        self.fov = fov # Left, Right, Up, Down
         self.center = center
         self.eye = eye
         self.up = up
@@ -46,43 +46,34 @@ class Lidar:
 
         return extrinsic_matrix_4x4
 
-
     def get_rays(self) -> Tuple[np.ndarray, np.ndarray]:
-        extrinsics = self.get_extrinsics()
-        
-        fov_x, fov_y = self.fov  # 视场角
+        fov_l, fov_r, fov_u, fov_d = self.fov  # 视场角度
         res_x, res_y = self.resolution  # 角度采样间隔
         
-        # 计算射线数量
-        num_rays_x = int(np.ceil(fov_x / res_x)) + 1
-        num_rays_y = int(np.ceil(fov_y / res_y)) + 1
+        forward = (self.center - self.eye) / np.linalg.norm(self.center - self.eye)
+        right = np.cross(forward, self.up)
+        right /= np.linalg.norm(right)
+        new_up = np.cross(right, forward)
         
-        # 生成角度网格
-        angles_x = (np.arange(num_rays_x) - num_rays_x // 2) * res_x
-        angles_y = (np.arange(num_rays_y) - num_rays_y // 2) * res_y
+        angle_x = np.linspace(-fov_l, fov_r, int((fov_l + fov_r) / res_x) + 1)
+        angle_y = np.linspace(-fov_d, fov_u, int((fov_d + fov_u) / res_y) + 1)
+
+        tan_angle_x, tan_angle_y = np.tan(np.radians(angle_x)), np.tan(np.radians(angle_y))
+        tan_grid_x, tan_grid_y = np.meshgrid(tan_angle_x, tan_angle_y, indexing='ij')
+
+        rays_local = np.stack([tan_grid_x, tan_grid_y, np.ones_like(tan_grid_x)], axis=-1)
+
+        rays_world = (
+            forward + 
+            tan_grid_x[..., np.newaxis] * right + 
+            tan_grid_y[..., np.newaxis] * new_up
+        )
+        rays_world /= np.linalg.norm(rays_world, axis=-1, keepdims=True)
         
-        # 角度转换为弧度
-        angles_x_rad = np.deg2rad(angles_x)
-        angles_y_rad = np.deg2rad(angles_y)
+        rays_local = rays_local.reshape(-1, 3)
+        rays_world = rays_world.reshape(-1, 3)
         
-        # 创建角度网格
-        angles_x_grid, angles_y_grid = np.meshgrid(angles_x_rad, angles_y_rad)
-        
-        # 计算Lidar坐标系下的射线方向
-        ray_dir_lidar_x = np.cos(angles_y_grid) * np.sin(angles_x_grid)
-        ray_dir_lidar_y = np.sin(angles_y_grid)
-        ray_dir_lidar_z = np.cos(angles_y_grid) * np.cos(angles_x_grid)
-        
-        # 合并方向向量并归一化
-        rays_lidar = np.stack([ray_dir_lidar_x, ray_dir_lidar_y, ray_dir_lidar_z], axis=-1)
-        rays_lidar = rays_lidar.reshape(-1, 3)
-        rays_lidar /= np.linalg.norm(rays_lidar, axis=1, keepdims=True)
-        
-        # 将射线转换到世界坐标系
-        rays_world = (extrinsics[:3, :3] @ rays_lidar.T).T
-        rays_world /= np.linalg.norm(rays_world, axis=1, keepdims=True)
-        
-        return rays_lidar, rays_world
+        return rays_local, rays_world
     
     def __str__(self) -> str:
         return f"Lidar(resolution={self.resolution}, fov={self.fov}, eye={self.eye}, center={self.center}, up={self.up})"

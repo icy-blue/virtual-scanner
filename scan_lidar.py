@@ -11,17 +11,6 @@ from virtual_lidar.lidar import Lidar
 from virtual_lidar.scanner import LidarScanner
 
 
-def direction_to_theta_phi(direction: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    将方向向量转换为极坐标系下的角度
-    :param direction: 方向向量 (Nx3)
-    :return: theta (水平方向角度), phi (垂直方向角度)
-    """
-    theta = np.arctan2(direction[:, 0], direction[:, 2])
-    phi = np.arcsin(direction[:, 1])
-    return theta, phi
-
-
 def calculate_distance(extent, direction):
     if direction == 'front' or direction == 'back':
         max_extent = max(extent[0], extent[2])
@@ -69,9 +58,13 @@ def parse_direction(direction: str) -> int:
 
 def main():
     resolution = (0.05, 0.05)
-    fov = (60.0, 60.0)
+    fov = (15., 15., 15., 15.)
+    distance_noise_std = 0.015
+    angle_noise_std = 100
     mesh_dir = 'D:/data/normal/meshes_data'
     mesh_list = glob.glob(mesh_dir + '/**/*.obj', recursive=True)
+    save_dir = 'D:/data/normal/pcd_data/distance_0.015_angle_100'
+    os.makedirs(save_dir, exist_ok=True)
     cameras = get_lidars([10, 10, 10], resolution, fov)
     for item in tqdm(sorted(mesh_list)):
         mesh = o3d.io.read_triangle_mesh(item)
@@ -86,22 +79,20 @@ def main():
         pcd_all.point['theta'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.float32))
         pcd_all.point['phi'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.float32))
         pcd_all.point['source'] = o3d.core.Tensor(np.zeros([0, 1], dtype=np.int16))
-        distance_noise_std = 0.015
-        angle_noise_std = 100
         for direction, camera in cameras.items():
             scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
             tri_mesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
             _points, _normals, _rays = scanner.virtual_scan(tri_mesh, use_noise=True)
-            _theta, _phi = direction_to_theta_phi(_rays)
+            _theta, _phi = LidarScanner.direction_to_theta_phi(_rays)
             tpcd = o3d.t.geometry.PointCloud()
-            tpcd.point['positions'] = o3d.core.Tensor(_points, dtype=o3d.core.Dtype.Float32)
-            tpcd.point['normals'] = o3d.core.Tensor(_normals, dtype=o3d.core.Dtype.Float32)
-            tpcd.point['theta'] = o3d.core.Tensor(_theta.reshape(-1, 1), dtype=o3d.core.Dtype.Float32)
-            tpcd.point['phi'] = o3d.core.Tensor(_phi.reshape(-1, 1), dtype=o3d.core.Dtype.Float32)
+            tpcd.point['positions'] = o3d.core.Tensor(_points, dtype=np.float32)
+            tpcd.point['normals'] = o3d.core.Tensor(_normals, dtype=np.float32)
+            tpcd.point['theta'] = o3d.core.Tensor(_theta.reshape(-1, 1), dtype=np.float32)
+            tpcd.point['phi'] = o3d.core.Tensor(_phi.reshape(-1, 1), dtype=np.float32)
             tpcd.point['source'] = o3d.core.Tensor(np.full((_points.shape[0], 1), parse_direction(direction),
                                                            dtype=np.int16))
             pcd_all += tpcd
-        o3d.t.io.write_point_cloud(item.replace('.obj', '.pcd'), pcd_all)
+        o3d.t.io.write_point_cloud(f'{save_dir}/{os.path.basename(item)[:-4]}.pcd', pcd_all)
 
 
 

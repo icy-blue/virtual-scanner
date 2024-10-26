@@ -89,4 +89,15 @@ class LidarScanner:
 
         return noisy_point_cloud, normal, noisy_rays_direction_world
 
-        
+    @staticmethod
+    def direction_to_theta_phi(direction: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        将方向向量转换为极坐标系下的角度
+        :param direction: 方向向量 (Nx3)
+        :return: theta (水平方向角度), phi (垂直方向角度)
+        """
+        x, y, z = direction[:, 0], direction[:, 1], direction[:, 2]
+        theta = np.arctan2(y, x)
+        r = np.linalg.norm(direction[:, :2], axis=1)
+        phi = np.arctan2(z, r)
+        return theta, phi
