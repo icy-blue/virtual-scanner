@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 import sys
 
 if sys.platform == "win32":
-    install_requires = ['open3d<=0.16']
+    install_requires = ['open3d<=0.16', 'pymeshlab', 'opencv-python']
 else:
-    install_requires = []
+    install_requires = ['open3d', 'pymeshlab', 'opencv-python']
 
 setup(
     name="virtual_scanner",
