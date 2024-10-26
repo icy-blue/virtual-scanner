@@ -8,7 +8,7 @@ else:
 
 setup(
     name="virtual_scanner",
-    version="0.1",
+    version="0.1.1",
     author="icy",
     author_email="i@icys.top",
     description="A virtual scanner using open3d",
