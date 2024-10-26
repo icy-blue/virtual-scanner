@@ -4,8 +4,8 @@ from typing import Tuple
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
-from virtrual_scanner import KNN as knn
-from virtrual_scanner import Camera, CameraScanner
+from virtual_scanner import KNN as knn
+from virtual_scanner import Camera, CameraScanner
 
 
 def calculate_distance(extent, direction):
