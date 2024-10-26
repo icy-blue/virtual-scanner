@@ -71,11 +71,11 @@ def main():
         mesh.translate(-center)
         mesh.scale(min(1.5, 1.5 / np.max(extent)), center=[0, 0, 0])
         center, extent = get_center_and_extent(mesh)
+        tri_mesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
         # print(center, extent)
         pcd = PointCloudManager()
         for direction, camera in cameras.items():
             scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
-            tri_mesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
             _points, _normals, _rays = scanner.virtual_scan(tri_mesh, use_noise=True)
             _dots = np.sum(_rays * _normals, axis=1)
             print(np.sum(_dots > 0.1), _dots[_dots > 0.1])
