@@ -7,8 +7,7 @@ import open3d as o3d
 from tqdm import tqdm
 
 import trimesh
-from virtual_lidar.lidar import Lidar
-from virtual_lidar.scanner import LidarScanner
+from virtrual_scanner import Lidar, LidarScanner
 
 
 def calculate_distance(extent, direction):

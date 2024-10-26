@@ -1,13 +1,11 @@
 import glob
-import os.path
 from typing import Tuple
 
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
-from tool.knn import KNN as knn
-from virtual_scanner.camera import Camera
-from virtual_scanner.scanner import CameraScanner
+from virtrual_scanner import KNN as knn
+from virtrual_scanner import Camera, CameraScanner
 
 
 def calculate_distance(extent, direction):
