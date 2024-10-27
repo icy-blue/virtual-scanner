@@ -56,21 +56,28 @@ def parse_direction(direction: str) -> int:
 
 
 def main():
-    resolution = (0.05, 0.05)
-    fov = (10., 10., 10., 10.)
-    distance_noise_std = 0.01
-    angle_noise_std = 50
+    resolution = (200, 200)
+    distance = 5
+    fov_y = np.rad2deg(np.arctan2(1, distance))
+    fov_x = fov_y / resolution[1] * resolution[0]
+    print(fov_x, fov_y)
+    distance_noise_rate = 0.0025
+    angle_noise_std = 100
     mesh_dir = 'D:/data/normal/meshes_data'
     mesh_list = glob.glob(mesh_dir + '/**/*.obj', recursive=True)
-    save_dir = 'D:/data/normal/pcd_data/distance_0.01_angle_50_fov_10'
+    save_dir = f'D:/data/normal/pcd_data/noise_{distance_noise_rate * 100:.2f}_{angle_noise_std}-{distance}m'
     os.makedirs(save_dir, exist_ok=True)
-    cameras = get_lidars([10, 10, 10], resolution, fov)
+    cameras = get_lidars([distance] * 3, resolution, (fov_x / 2, fov_x / 2, fov_y / 2, fov_y / 2))
     for item in tqdm(sorted(mesh_list)):
+        if os.path.exists(f'{save_dir}/{os.path.basename(item)[:-4]}.pcd'):
+            continue
         mesh = o3d.io.read_triangle_mesh(item)
         center, extent = get_center_and_extent(mesh)
         mesh.translate(-center)
-        mesh.scale(min(1.5, 1.5 / np.max(extent)), center=[0, 0, 0])
+        mesh.scale(1 / np.max(extent), center=[0, 0, 0])
         center, extent = get_center_and_extent(mesh)
+        print(np.linalg.norm(np.array(extent)) * distance_noise_rate)
+        distance_noise_std = np.linalg.norm(np.array(extent)) * distance_noise_rate
         tri_mesh = trimesh.Trimesh(vertices=np.asarray(mesh.vertices), faces=np.asarray(mesh.triangles))
         # print(center, extent)
         pcd = PointCloudManager()
@@ -78,7 +85,9 @@ def main():
             scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
             _points, _normals, _rays = scanner.virtual_scan(tri_mesh, use_noise=True)
             _dots = np.sum(_rays * _normals, axis=1)
-            print(np.sum(_dots > 0.1), _dots[_dots > 0.1])
+            dot_index = _dots > 0.1
+            print(np.sum(dot_index), np.sum(~dot_index), _dots[dot_index])
+            _points, _normals, _rays = _points[~dot_index], _normals[~dot_index], _rays[~dot_index]
             _theta, _phi = LidarScanner.direction_to_theta_phi(_rays)
             points = _points.astype(np.float32)
             colors = (_rays / 2 + 0.5).astype(np.float32)

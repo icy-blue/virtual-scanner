@@ -25,79 +25,58 @@ class LidarScanner:
         :param ray_lidar: Lidar坐标系下的射线方向 (Nx3)
         :return: 加入角度噪声后的Lidar坐标系下射线方向 (Nx3)
         """
-        # 将Lidar射线方向转换为极坐标
-        horizontal_angle = np.arctan2(ray_lidar[:, 0], ray_lidar[:, 2])  # 水平方向的角度
-        vertical_angle = np.arcsin(ray_lidar[:, 1])  # 垂直方向的角度
+        theta, phi = self.direction_to_theta_phi(ray_lidar)
 
         # 添加高斯噪声到角度
-        horizontal_angle += np.random.normal(0, self.angle_noise_std, size=horizontal_angle.shape)
-        vertical_angle += np.random.normal(0, self.angle_noise_std, size=vertical_angle.shape)
+        theta += np.random.normal(0, self.angle_noise_std, size=theta.shape)
+        phi += np.random.normal(0, self.angle_noise_std, size=phi.shape)
 
         # 将扰动后的极坐标转换回笛卡尔坐标
-        ray_lidar_noisy = np.zeros_like(ray_lidar)
-        ray_lidar_noisy[:, 0] = np.cos(vertical_angle) * np.sin(horizontal_angle)  # X方向
-        ray_lidar_noisy[:, 1] = np.sin(vertical_angle)  # Y方向
-        ray_lidar_noisy[:, 2] = np.cos(vertical_angle) * np.cos(horizontal_angle)  # Z方向
-
-        # 归一化
-        ray_lidar_noisy /= np.linalg.norm(ray_lidar_noisy, axis=1, keepdims=True)
+        ray_lidar_noisy = self.theta_phi_to_direction(theta, phi)
 
         return ray_lidar_noisy
 
-    def apply_noise(self, point_cloud: np.ndarray, rays_lidar: np.ndarray, rays_world: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def apply_noise(self, point_cloud: np.ndarray, rays_world: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
         """
         应用角度和距离噪声，返回带噪声的点云
         :param point_cloud: 原始点云 (Nx3)
-        :param rays_lidar: Lidar坐标系下的射线方向 (Nx3)
         :param rays_world: 世界坐标系下的射线方向 (Nx3)
         :return: 加入噪声后的点云和射线方向
         """
-        # 1. 在Lidar坐标系下添加角度噪声
-        noisy_rays_lidar = self.apply_angular_noise(rays_lidar)
+        noisy_rays_world = self.apply_angular_noise(rays_world)
 
-        # 2. 将加入噪声的射线方向转换到世界坐标系
-        extrinsics = self.lidar.get_extrinsics()
-        noisy_rays_world = (extrinsics[:3, :3] @ noisy_rays_lidar.T).T
-
-        # 3. 计算距离噪声并更新点云位置
         distances = np.linalg.norm(point_cloud - self.lidar.eye, axis=1)
         distance_noise = np.random.normal(0, self.distance_noise_std, size=distances.shape)
         noisy_distances = distances + distance_noise
 
-        # 重新计算带噪声的点云位置
         noisy_point_cloud = self.lidar.eye + noisy_rays_world * noisy_distances[:, np.newaxis]
 
         return noisy_point_cloud, noisy_rays_world
     
-    def virtual_scan(self, mesh: trimesh.Trimesh, use_noise: bool = False, batch_size: int = 10000) -> Tuple[np.ndarray, np.ndarray]:
-        rays_lidar, rays_world = self.lidar.get_rays()
+    def virtual_scan(self, mesh: trimesh.Trimesh, use_noise: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        进行虚拟激光雷达扫描
+        :param mesh: 三角网格模型
+        :param use_noise: 是否使用噪声
+        :return: 点云 (Nx3), 法向量 (Nx3), 射线方向 (Nx3)
+        """
+        _, rays_world = self.lidar.get_rays()
         origin = np.repeat([self.lidar.eye], rays_world.shape[0], axis=0)
-        batches = math.ceil(rays_world.shape[0] / batch_size)
-        for i in range(batches):
-            start = i * batch_size
-            end = (i + 1) * batch_size
-            rays_world_batch = rays_world[start:end]
-            origin_batch = origin[start:end]
-            index_triangle_batch, index_ray_batch, locations_batch = mesh.ray.intersects_id(
-                origin_batch, rays_world_batch, multiple_hits=False, return_locations=True
-            )
-            if i == 0:
-                index_triangle, index_ray, locations = index_triangle_batch, index_ray_batch, locations_batch
-            else:
-                index_triangle = np.concatenate([index_triangle, index_triangle_batch])
-                index_ray = np.concatenate([index_ray, index_ray_batch])
-                locations = np.concatenate([locations, locations_batch])
+
+        # 进行射线与mesh的相交计算
+        index_triangle, index_ray, locations = mesh.ray.intersects_id(
+            origin, rays_world, multiple_hits=False, return_locations=True
+        )
 
         point_cloud = locations
         normal = mesh.face_normals[index_triangle]
-        rays_direction_lidar = rays_lidar[index_ray]
         rays_direction_world = rays_world[index_ray]
 
         if not use_noise:
             return point_cloud, normal, rays_direction_world
 
         # 先添加角度噪声，再计算距离噪声并更新点云
-        noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_lidar, rays_direction_world)
+        noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_world)
 
         return noisy_point_cloud, normal, noisy_rays_direction_world
 
@@ -113,3 +92,16 @@ class LidarScanner:
         r = np.linalg.norm(direction[:, :2], axis=1)
         phi = np.arctan2(z, r)
         return theta, phi
+
+    @staticmethod
+    def theta_phi_to_direction(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+        """
+        将极坐标系下的角度转换为方向向量
+        :param theta: 水平方向角度
+        :param phi: 垂直方向角度
+        :return: 方向向量 (Nx3)
+        """
+        x = np.cos(phi) * np.cos(theta)
+        y = np.cos(phi) * np.sin(theta)
+        z = np.sin(phi)
+        return np.stack([x, y, z], axis=-1)
