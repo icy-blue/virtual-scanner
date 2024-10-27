@@ -48,15 +48,15 @@ class Lidar:
 
     def get_rays(self) -> Tuple[np.ndarray, np.ndarray]:
         fov_l, fov_r, fov_u, fov_d = self.fov  # 视场角度
-        res_x, res_y = self.resolution  # 角度采样间隔
+        res_x, res_y = self.resolution
         
         forward = (self.center - self.eye) / np.linalg.norm(self.center - self.eye)
         right = np.cross(forward, self.up)
         right /= np.linalg.norm(right)
         new_up = np.cross(right, forward)
         
-        angle_x = np.linspace(-fov_l, fov_r, int((fov_l + fov_r) / res_x) + 1)
-        angle_y = np.linspace(-fov_d, fov_u, int((fov_d + fov_u) / res_y) + 1)
+        angle_x = np.linspace(-fov_l, fov_r, res_x)
+        angle_y = np.linspace(-fov_d, fov_u, res_y)
 
         tan_angle_x, tan_angle_y = np.tan(np.radians(angle_x)), np.tan(np.radians(angle_y))
         tan_grid_x, tan_grid_y = np.meshgrid(tan_angle_x, tan_angle_y, indexing='ij')
@@ -68,6 +68,8 @@ class Lidar:
             tan_grid_x[..., np.newaxis] * right + 
             tan_grid_y[..., np.newaxis] * new_up
         )
+
+        rays_local /= np.linalg.norm(rays_local, axis=-1, keepdims=True)
         rays_world /= np.linalg.norm(rays_world, axis=-1, keepdims=True)
         
         rays_local = rays_local.reshape(-1, 3)
