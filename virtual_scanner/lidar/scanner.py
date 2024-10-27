@@ -3,6 +3,7 @@ from typing import Tuple, List
 
 import numpy as np
 import trimesh
+import math
 import open3d as o3d
 from .lidar import Lidar
 
@@ -68,14 +69,25 @@ class LidarScanner:
 
         return noisy_point_cloud, noisy_rays_world
     
-    def virtual_scan(self, mesh: trimesh.Trimesh, use_noise: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+    def virtual_scan(self, mesh: trimesh.Trimesh, use_noise: bool = False, batch_size: int = 10000) -> Tuple[np.ndarray, np.ndarray]:
         rays_lidar, rays_world = self.lidar.get_rays()
         origin = np.repeat([self.lidar.eye], rays_world.shape[0], axis=0)
+        batches = math.ceil(rays_world.shape[0] / batch_size)
+        for i in range(batches):
+            start = i * batch_size
+            end = (i + 1) * batch_size
+            rays_world_batch = rays_world[start:end]
+            origin_batch = origin[start:end]
+            index_triangle_batch, index_ray_batch, locations_batch = mesh.ray.intersects_id(
+                origin_batch, rays_world_batch, multiple_hits=False, return_locations=True
+            )
+            if i == 0:
+                index_triangle, index_ray, locations = index_triangle_batch, index_ray_batch, locations_batch
+            else:
+                index_triangle = np.concatenate([index_triangle, index_triangle_batch])
+                index_ray = np.concatenate([index_ray, index_ray_batch])
+                locations = np.concatenate([locations, locations_batch])
 
-        # 进行射线与mesh的相交计算
-        index_triangle, index_ray, locations = mesh.ray.intersects_id(
-            origin, rays_world, multiple_hits=False, return_locations=True
-        )
         point_cloud = locations
         normal = mesh.face_normals[index_triangle]
         rays_direction_lidar = rays_lidar[index_ray]
