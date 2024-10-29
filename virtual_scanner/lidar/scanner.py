@@ -73,7 +73,7 @@ class LidarScanner:
         rays_direction_world = rays_world[index_ray]
 
         if not use_noise:
-            return point_cloud, normal, rays_direction_world
+            return point_cloud, normal, rays_direction_world, index_triangle
 
         # 先添加角度噪声，再计算距离噪声并更新点云
         noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_world)
