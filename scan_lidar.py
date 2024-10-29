@@ -85,7 +85,7 @@ def main():
         pcd = PointCloudManager()
         for direction, camera in cameras.items():
             # scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
-            scanner = LidarScanner(camera, distance_noise_std, np.arctan2(distance_noise_std, zdistance))
+            scanner = LidarScanner(camera, distance_noise_std, np.arctan2(distance_noise_std, distance))
             _points, _normals, _rays, _triangle = scanner.virtual_scan(tri_mesh, use_noise=True)
             _dots = np.sum(_rays * _normals, axis=1)
             dot_index = _dots > 0.1

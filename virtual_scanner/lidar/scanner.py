@@ -78,7 +78,7 @@ class LidarScanner:
         # 先添加角度噪声，再计算距离噪声并更新点云
         noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_world)
 
-        return noisy_point_cloud, normal, noisy_rays_direction_world
+        return noisy_point_cloud, normal, noisy_rays_direction_world, index_triangle
 
     @staticmethod
     def direction_to_theta_phi(direction: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
