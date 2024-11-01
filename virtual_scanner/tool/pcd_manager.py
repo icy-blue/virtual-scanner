@@ -3,8 +3,9 @@ import numpy as np
 from typing import List, Dict
 
 class PointCloudManager:
-    def __init__(self):
+    def __init__(self, split_length=5000_0000):
         self.point_cloud = {}
+        self.split_length = split_length
 
     def add(self, **kwargs):
         self._check_shape(kwargs)
@@ -41,7 +42,11 @@ class PointCloudManager:
     
     def save(self, path: str):
         pcd = o3d.t.geometry.PointCloud()
-        for key, value in self.point_cloud.items():
-            dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
-            pcd.point[key] = o3d.core.Tensor(value, dtype=dtype)
-        o3d.t.io.write_point_cloud(path, pcd)
+        block_num = np.ceil(len(self.point_cloud['points']) / self.split_length)
+        for i in range(block_num):
+            start = i * self.split_length
+            end = min((i + 1) * self.split_length, len(self.point_cloud['points']))
+            for key, value in self.point_cloud.items():
+                dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
+                pcd.point[key] = o3d.core.Tensor(value[start:end], dtype=dtype)
+            o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
