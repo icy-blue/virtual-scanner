@@ -87,12 +87,12 @@ def main():
             # scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std))
             scanner = LidarScanner(camera, distance_noise_std, np.arctan2(distance_noise_std, distance))
             _points, _normals, _rays, _triangle, o_dots = scanner.virtual_scan(tri_mesh,
-                                                                       use_noise=scanner.distance_noise_std != 0,
-                                                                       edit_normal=True)
-            _dots = np.sum(_rays * _normals, axis=1)
+                                                                               use_noise=scanner.distance_noise_std != 0,
+                                                                               edit_normal=True)
+            new_dots = np.sum(_normals * _rays, axis=1)
             index = o_dots > 0
-            print(np.sum(index), np.sum(~index), _dots[index])
-            print(np.unique(o_dots[~index] * _dots[~index], return_counts=True))
+            print(np.sum(index), np.sum(~index), new_dots[index])
+            print(np.unique(np.sign(o_dots[~index]) * np.sign(new_dots[~index]), return_counts=True))
             _rays, _points, _normals = _rays[~index], _points[~index], _normals[~index]
             _theta, _phi = LidarScanner.direction_to_theta_phi(_rays)
             points = _points.astype(np.float32)

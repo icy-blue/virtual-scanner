@@ -53,6 +53,7 @@ class PointCloudManager:
             self.point_cloud[key] = np.vstack([self.point_cloud[key], *[point_cloud[key] for point_cloud in point_clouds]])
     
     def save(self, path: str, split: bool = True):
+        path = path[:-4] if path.endswith('.pcd') else path
         pcd = o3d.t.geometry.PointCloud()
         block_num = np.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
