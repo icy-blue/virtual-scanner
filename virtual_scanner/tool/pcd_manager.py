@@ -7,6 +7,18 @@ class PointCloudManager:
         self.point_cloud = {}
         self.split_length = split_length
 
+    @classmethod
+    def read_o3d_pcd(cls, path: str):
+        pcd = o3d.t.io.read_point_cloud(path)
+        my_pcd = PointCloudManager()
+        for key in pcd.point.keys():
+            my_pcd[key] = pcd.point[key].numpy()
+        my_pcd.add(**my_pcd)
+        return my_pcd
+
+    def merge(self, point_cloud: 'PointCloudManager'):
+        self.add(**point_cloud.point_cloud)
+
     def add(self, **kwargs):
         self._check_shape(kwargs)
         if len(self.point_cloud.keys()) == 0:
@@ -40,9 +52,15 @@ class PointCloudManager:
         for key in self.point_cloud.keys():
             self.point_cloud[key] = np.vstack([self.point_cloud[key], *[point_cloud[key] for point_cloud in point_clouds]])
     
-    def save(self, path: str):
+    def save(self, path: str, split: bool = True):
         pcd = o3d.t.geometry.PointCloud()
         block_num = np.ceil(len(self.point_cloud['points']) / self.split_length)
+        if not split or block_num == 1:
+            for key, value in self.point_cloud.items():
+                dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
+                pcd.point[key] = o3d.core.Tensor(value, dtype=dtype)
+            o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
+            return
         for i in range(block_num):
             start = i * self.split_length
             end = min((i + 1) * self.split_length, len(self.point_cloud['points']))

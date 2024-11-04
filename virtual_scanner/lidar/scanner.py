@@ -6,6 +6,7 @@ import trimesh
 import math
 import open3d as o3d
 from .lidar import Lidar
+from ..tool.knn import KNN as knn
 
 
 class LidarScanner:
@@ -53,7 +54,10 @@ class LidarScanner:
 
         return noisy_point_cloud, noisy_rays_world
     
-    def virtual_scan(self, mesh: trimesh.Trimesh, use_noise: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+    def virtual_scan(self, 
+                     mesh: trimesh.Trimesh, 
+                     use_noise: bool = False, 
+                     edit_normal: bool = False) -> Tuple[np.ndarray, np.ndarray]:
         """
         进行虚拟激光雷达扫描
         :param mesh: 三角网格模型
@@ -77,6 +81,11 @@ class LidarScanner:
 
         # 先添加角度噪声，再计算距离噪声并更新点云
         noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_world)
+
+        if edit_normal:
+            sampled_points, face_indices = mesh.sample(1e6, return_index=True)
+            _, _idx = knn.huge_point_cloud_nn(noisy_point_cloud, sampled_points, grid_length=1, expand_length=0.1)
+            normal = mesh.face_normals[face_indices[_idx]]
 
         return noisy_point_cloud, normal, noisy_rays_direction_world, index_triangle
 
