@@ -54,7 +54,7 @@ class PointCloudManager:
     
     def save(self, path: str, split: bool = True):
         pcd = o3d.t.geometry.PointCloud()
-        block_num = np.ceil(len(self.point_cloud['points']) / self.split_length)
+        block_num = np.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
             for key, value in self.point_cloud.items():
                 dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
@@ -63,7 +63,7 @@ class PointCloudManager:
             return
         for i in range(block_num):
             start = i * self.split_length
-            end = min((i + 1) * self.split_length, len(self.point_cloud['points']))
+            end = min((i + 1) * self.split_length, len(self.point_cloud['positions']))
             for key, value in self.point_cloud.items():
                 dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
                 pcd.point[key] = o3d.core.Tensor(value[start:end], dtype=dtype)
