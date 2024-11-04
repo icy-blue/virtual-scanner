@@ -1,6 +1,6 @@
 import glob
 from typing import Tuple
-
+import os
 import numpy as np
 import open3d as o3d
 from tqdm import tqdm
@@ -57,7 +57,7 @@ def main():
     resolution = (320, 240)
     fov = 60.0
     mesh_dir = 'D:/data/normal/meshes_data'
-    # save_dir = 'D:\\data\\abc_scan_result'
+    save_dir = 'D:\\data\\abc_scan_result'
     mesh_list = glob.glob(mesh_dir + '/**/*.obj', recursive=True)
     for item in tqdm(sorted(mesh_list)):
         mesh = o3d.io.read_triangle_mesh(item)
@@ -95,7 +95,8 @@ def main():
         pcd_all.point['colors'] = o3d.core.Tensor(sampled[idx, 3:6] / 2 + 0.5)
 
         # o3d.visualization.draw_geometries([pcd_all, mesh, coord])
-        o3d.t.io.write_point_cloud(item.replace('.obj', '.pcd'), pcd_all)
+        basename = os.path.basename(item).split('.')[0]
+        o3d.t.io.write_point_cloud(os.path.join(save_dir, basename + '.pcd'), pcd_all)
 
 
 if __name__ == "__main__":

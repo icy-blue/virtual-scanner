@@ -57,11 +57,12 @@ class LidarScanner:
     def virtual_scan(self, 
                      mesh: trimesh.Trimesh, 
                      use_noise: bool = False, 
-                     edit_normal: bool = False) -> Tuple[np.ndarray, np.ndarray]:
+                     edit_normal: bool = False) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         进行虚拟激光雷达扫描
         :param mesh: 三角网格模型
         :param use_noise: 是否使用噪声
+        :param edit_normal: 是否更新法向量
         :return: 点云 (Nx3), 法向量 (Nx3), 射线方向 (Nx3)
         """
         _, rays_world = self.lidar.get_rays()
@@ -75,9 +76,10 @@ class LidarScanner:
         point_cloud = locations
         normal = mesh.face_normals[index_triangle]
         rays_direction_world = rays_world[index_ray]
+        origin_dot = np.sum(normal * rays_direction_world, axis=1)
 
         if not use_noise:
-            return point_cloud, normal, rays_direction_world, index_triangle
+            return point_cloud, normal, rays_direction_world, index_triangle, origin_dot
 
         # 先添加角度噪声，再计算距离噪声并更新点云
         noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_world)
@@ -87,7 +89,7 @@ class LidarScanner:
             _, _idx = knn.huge_point_cloud_nn(noisy_point_cloud, sampled_points, grid_length=1, expand_length=0.1)
             normal = mesh.face_normals[face_indices[_idx]]
 
-        return noisy_point_cloud, normal, noisy_rays_direction_world, index_triangle
+        return noisy_point_cloud, normal, noisy_rays_direction_world, index_triangle, origin_dot
 
     @staticmethod
     def direction_to_theta_phi(direction: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:

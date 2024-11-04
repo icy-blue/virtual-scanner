@@ -84,13 +84,16 @@ def main():
         # print(center, extent)
         pcd = PointCloudManager()
         for direction, camera in cameras.items():
-            # scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std / 3600))
+            # scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std))
             scanner = LidarScanner(camera, distance_noise_std, np.arctan2(distance_noise_std, distance))
-            _points, _normals, _rays, _triangle = scanner.virtual_scan(tri_mesh, use_noise=True)
+            _points, _normals, _rays, _triangle, o_dots = scanner.virtual_scan(tri_mesh,
+                                                                       use_noise=scanner.distance_noise_std != 0,
+                                                                       edit_normal=True)
             _dots = np.sum(_rays * _normals, axis=1)
-            dot_index = _dots > 0.1
-            print(np.sum(dot_index), np.sum(~dot_index), _dots[dot_index])
-            _points, _normals, _rays, _traingle = _points[~dot_index], _normals[~dot_index], _rays[~dot_index], _triangle[~dot_index]
+            index = o_dots > 0
+            print(np.sum(index), np.sum(~index), _dots[index])
+            print(np.unique(o_dots[~index] * _dots[~index], return_counts=True))
+            _rays, _points, _normals = _rays[~index], _points[~index], _normals[~index]
             _theta, _phi = LidarScanner.direction_to_theta_phi(_rays)
             points = _points.astype(np.float32)
             colors = (_rays / 2 + 0.5).astype(np.float32)
@@ -98,7 +101,7 @@ def main():
             theta = _theta.astype(np.float32).reshape(-1, 1)
             phi = _phi.astype(np.float32).reshape(-1, 1)
             source = np.full((_points.shape[0], 1), parse_direction(direction), dtype=np.int32)
-            traingle = _traingle.astype(np.int32).reshape(-1, 1)
+            traingle = _triangle.astype(np.int32).reshape(-1, 1)
             pcd.add(positions=points, colors=colors, normals=normals, theta=theta, phi=phi, source=source, traingle=traingle)
         pcd.save(f'{save_dir}/{os.path.basename(item)[:-4]}.pcd')
 
