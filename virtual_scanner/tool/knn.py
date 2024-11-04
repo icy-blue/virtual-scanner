@@ -150,18 +150,18 @@ class KNN:
             print('bounding:', bound_min[:3].tolist(), bound_max[:3].tolist())
             print('grids length:', len(grid_points))
 
-        with tqdm(total=pc.shape[0]) as _t:
-            for grid_point in grid_points:
-                block_mask = cls.compute_mask(points, grid_point, grid_point + grid_length)
-                block_indices = torch.where(block_mask)[0]
+        # with tqdm(total=pc.shape[0]) as _t:
+        for grid_point in grid_points:
+            block_mask = cls.compute_mask(points, grid_point, grid_point + grid_length)
+            block_indices = torch.where(block_mask)[0]
 
-                if block_indices.shape[0] > 0:
-                    neighbors_mask = cls.compute_mask(points, grid_point - expand_length,
-                                                      grid_point + grid_length + expand_length)
-                    neighbor_indices = torch.where(neighbors_mask)[0]
+            if block_indices.shape[0] > 0:
+                neighbors_mask = cls.compute_mask(points, grid_point - expand_length,
+                                                  grid_point + grid_length + expand_length)
+                neighbor_indices = torch.where(neighbors_mask)[0]
 
-                    new_feats[block_indices] = cls._minibatch_median(pc, block_indices, neighbor_indices, k)
-                    _t.update(block_indices.shape[0])
+                new_feats[block_indices] = cls._minibatch_median(pc, block_indices, neighbor_indices, k)
+                    # _t.update(block_indices.shape[0])
 
         return new_feats.cpu().numpy()
 
