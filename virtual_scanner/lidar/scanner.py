@@ -85,7 +85,7 @@ class LidarScanner:
         noisy_point_cloud, noisy_rays_direction_world = self.apply_noise(point_cloud, rays_direction_world)
 
         if edit_normal:
-            sampled_points, face_indices = mesh.sample(1e6, return_index=True)
+            sampled_points, face_indices = mesh.sample(1000000, return_index=True)
             _, _idx = knn.huge_point_cloud_nn(noisy_point_cloud, sampled_points, grid_length=1, expand_length=0.1)
             normal = mesh.face_normals[face_indices[_idx]]
 
