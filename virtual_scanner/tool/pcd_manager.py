@@ -1,5 +1,6 @@
 import open3d as o3d
 import numpy as np
+import math
 from typing import List, Dict
 
 class PointCloudManager:
@@ -62,7 +63,7 @@ class PointCloudManager:
     def save(self, path: str, split: bool = True):
         path = path[:-4] if path.endswith('.pcd') else path
         pcd = o3d.t.geometry.PointCloud()
-        block_num = np.ceil(len(self.point_cloud['positions']) / self.split_length)
+        block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
             for key, value in self.point_cloud.items():
                 pcd.point[key] = o3d.core.Tensor(value)
