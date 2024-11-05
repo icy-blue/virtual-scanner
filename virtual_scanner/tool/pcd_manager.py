@@ -10,10 +10,11 @@ class PointCloudManager:
     @classmethod
     def read_o3d_pcd(cls, path: str):
         pcd = o3d.t.io.read_point_cloud(path)
-        my_pcd = PointCloudManager()
+        my_pcd = cls()
+        pcd_dict = {}
         for key in pcd.point:
-            my_pcd[key] = pcd.point[key].numpy()
-        my_pcd.add(**my_pcd.point_cloud)
+            pcd_dict[key] = pcd.point[key].numpy()
+        my_pcd.add(**pcd_dict)
         return my_pcd
 
     def merge(self, point_cloud: 'PointCloudManager'):
