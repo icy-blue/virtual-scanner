@@ -37,7 +37,7 @@ class PointCloudManager:
             if point_length is None:
                 point_length = value.shape[0]
             else:
-                assert point_length == value.shape[0], "The number of points is not the same"
+                assert point_length == value.shape[0], f"The number of points is not the same, {point_length} != {value.shape[0]}"
         return point_cloud
     
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]'):
@@ -48,9 +48,15 @@ class PointCloudManager:
             for key in point_clouds[0].keys():
                 self.point_cloud[key] = np.vstack([point_cloud[key] for point_cloud in point_clouds])
             return
-        assert set(self.point_cloud.keys()) == set(point_clouds[0].keys()), "Keys of point clouds are not the same"
+        assert set(self.point_cloud.keys()) == set(point_clouds[0].keys()), f"Keys of point clouds are not the same, {self.point_cloud.keys()} != {point_clouds[0].keys()}"
         for key in self.point_cloud.keys():
             self.point_cloud[key] = np.vstack([self.point_cloud[key], *[point_cloud[key] for point_cloud in point_clouds]])
+        length = None
+        for key in self.point_cloud.keys():
+            if length is None:
+                length = self.point_cloud[key].shape[0]
+            else:
+                assert length == self.point_cloud[key].shape[0], f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
     
     def save(self, path: str, split: bool = True):
         path = path[:-4] if path.endswith('.pcd') else path
