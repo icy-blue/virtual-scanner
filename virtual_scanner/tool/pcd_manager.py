@@ -65,14 +65,12 @@ class PointCloudManager:
         block_num = np.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
             for key, value in self.point_cloud.items():
-                dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
-                pcd.point[key] = o3d.core.Tensor(value, dtype=dtype)
+                pcd.point[key] = o3d.core.Tensor(value)
             o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
             return
         for i in range(block_num):
             start = i * self.split_length
             end = min((i + 1) * self.split_length, len(self.point_cloud['positions']))
             for key, value in self.point_cloud.items():
-                dtype = o3d.core.Dtype.Float32 if value.dtype == np.float32 else o3d.core.Dtype.Int32
-                pcd.point[key] = o3d.core.Tensor(value[start:end], dtype=dtype)
+                pcd.point[key] = o3d.core.Tensor(value[start:end])
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
