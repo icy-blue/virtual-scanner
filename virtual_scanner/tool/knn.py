@@ -35,8 +35,9 @@ class KNN:
             raise TypeError(f'Unknown type {type(pc)}')
 
     @classmethod
-    def minibatch_nn(cls, pc0: any, pc1: any, verbose: bool = False, return_tensor=False) -> \
-            'Union[Tuple[np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor]]':
+    def minibatch_nn(
+        cls, pc0: any, pc1: any, verbose: bool = False, return_tensor: bool = False, k: int = 1
+    ) -> 'Union[Tuple[np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor]]':
         """
         pc0 到 pc1 的最近邻 1nn
         """
@@ -45,17 +46,25 @@ class KNN:
 
         pc0_tensor, pc1_tensor = cls.pc_to_tensor(pc0, device), cls.pc_to_tensor(pc1, device)
 
-        _knn = knn_points(pc0_tensor[:, :, :3], pc1_tensor[:, :, :3], K=1)
+        _knn = knn_points(pc0_tensor[:, :, :3], pc1_tensor[:, :, :3], K=k)
         dists, idx = _knn.dists, _knn.idx
-        dists = torch.sqrt(dists).reshape(-1)
-        idx = idx.reshape(-1)
+        dists = torch.sqrt(dists).squeeze(0)
+        idx = idx.squeeze(0)
+
+        if k == 1:
+            dists = dists.unsqueeze(1)
+            idx = idx.unsqueeze(1)
 
         if not return_tensor:
             dists = dists.cpu().numpy()
             idx = idx.cpu().numpy()
 
         if verbose:
-            print(f'1nn with shape {pc0.shape[0]}-{pc1.shape[0]} use time', time.time() - tick, file=sys.stderr)
+            print(
+                f'1nn with shape {pc0.shape[0]}-{pc1.shape[0]} use time',
+                time.time() - tick,
+                file=sys.stderr,
+            )
         return dists, idx
 
     @classmethod
