@@ -75,3 +75,9 @@ class PointCloudManager:
             for key, value in self.point_cloud.items():
                 pcd.point[key] = o3d.core.Tensor(value[start:end])
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
+
+    def slice(self, indices: np.ndarray):
+        sliced = PointCloudManager()
+        for key, value in self.point_cloud.items():
+            sliced.point_cloud[key] = value[indices]
+        return sliced

@@ -52,8 +52,8 @@ class KNN:
         idx = idx.squeeze(0)
 
         if k == 1:
-            dists = dists.unsqueeze(1)
-            idx = idx.unsqueeze(1)
+            dists = dists.squeeze(1)
+            idx = idx.squeeze(1)
 
         if not return_tensor:
             dists = dists.cpu().numpy()
