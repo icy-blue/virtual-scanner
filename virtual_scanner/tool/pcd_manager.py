@@ -81,3 +81,28 @@ class PointCloudManager:
         for key, value in self.point_cloud.items():
             sliced.point_cloud[key] = value[indices]
         return sliced
+    
+    def to_simple_o3d_pcd(self) -> o3d.geometry.PointCloud:
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(self.point_cloud['positions'])
+        if 'colors' in self.point_cloud:
+            pcd.colors = o3d.utility.Vector3dVector(self.point_cloud['colors'])
+        if 'normals' in self.point_cloud:
+            pcd.normals = o3d.utility.Vector3dVector(self.point_cloud['normals'])
+        return pcd
+
+    def __len__(self):
+        return len(self.point_cloud['positions'])
+    
+    def __getitem__(self, indices):
+        return self.slice(indices)
+    
+    @classmethod
+    def from_simple_o3d_pcd(cls, pcd: o3d.geometry.PointCloud) -> 'PointCloudManager':
+        manager = cls()
+        manager.point_cloud['positions'] = np.asarray(pcd.points)
+        if len(pcd.colors) > 0:
+            manager.point_cloud['colors'] = np.asarray(pcd.colors)
+        if len(pcd.normals) > 0:
+            manager.point_cloud['normals'] = np.asarray(pcd.normals)
+        return manager
