@@ -87,6 +87,9 @@ class KNN:
 
         with tqdm(total=pc0.shape[0], leave=False) as _t:
             for index, _ijk in enumerate(grid_points):
+                if verbose:
+                    print('processing:', _ijk.tolist())
+                    tick = time.time()
                 _min = _ijk - expand_length
                 _max = _ijk + grid_length + expand_length
                 pc0_mask = torch.where(cls.compute_mask(pc0, _ijk, _ijk + grid_length))[0]
@@ -101,9 +104,6 @@ class KNN:
                     # print(f'Warning; pc1 has no points in area {_min.tolist()} to {_max.tolist()}\n' +
                     #       f'while pc0 has {sub_pc0.shape[0]} points there.', file=sys.stderr)
                     continue
-                if verbose:
-                    print('processing:', _ijk.tolist())
-                    tick = time.time()
                 if sub_pc0.shape[0] > 5 * patch_size:
                     batch_result = torch.zeros([sub_pc0.shape[0], 2]).to(device)
                     batch_result[:] = torch.tensor([1e5, -1]).to(device)
