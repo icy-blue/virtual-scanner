@@ -2,14 +2,14 @@ from setuptools import setup, find_packages
 import sys
 
 if sys.platform == "win32":
-    install_requires = ['open3d<=0.16', 'pymeshlab==2023.12.post1']
+    install_requires = ['open3d', 'pymeshlab==2023.12.post1']
 else:
     install_requires = ['open3d', 'pymeshlab']
 install_requires += ['tqdm', 'trimesh', 'rtree']
 
 setup(
     name="virtual_scanner",
-    version="0.1.6",
+    version="0.1.7",
     author="icy",
     author_email="i@icys.top",
     description="A virtual scanner using open3d",

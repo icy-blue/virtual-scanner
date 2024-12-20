@@ -84,11 +84,8 @@ def main():
         # print(center, extent)
         pcd = PointCloudManager()
         for direction, camera in cameras.items():
-            # scanner = LidarScanner(camera, distance_noise_std, np.deg2rad(angle_noise_std))
             scanner = LidarScanner(camera, distance_noise_std, np.arctan2(distance_noise_std, distance))
-            _points, _normals, _rays, _triangle, o_dots = scanner.virtual_scan(tri_mesh,
-                                                                               use_noise=scanner.distance_noise_std != 0,
-                                                                               edit_normal=True)
+            _points, _normals, _rays, o_dots = scanner.virtual_scan_mitsuba(tri_mesh)
             new_dots = np.sum(_normals * _rays, axis=1)
             index = o_dots > 0
             print(np.sum(index), np.sum(~index), new_dots[index])
@@ -101,8 +98,7 @@ def main():
             theta = _theta.astype(np.float32).reshape(-1, 1)
             phi = _phi.astype(np.float32).reshape(-1, 1)
             source = np.full((_points.shape[0], 1), parse_direction(direction), dtype=np.int32)
-            traingle = _triangle.astype(np.int32).reshape(-1, 1)
-            pcd.add(positions=points, colors=colors, normals=normals, theta=theta, phi=phi, source=source, traingle=traingle)
+            pcd.add(positions=points, colors=colors, normals=normals, theta=theta, phi=phi, source=source)
         pcd.save(f'{save_dir}/{os.path.basename(item)[:-4]}.pcd')
 
 
