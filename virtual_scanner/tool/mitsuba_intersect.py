@@ -42,5 +42,5 @@ def mitsuba_intersect(mesh: trimesh.Trimesh, origins: np.ndarray, directions: np
 
     positions = np.asarray(sis.p).T[valid_mask]
     normals = np.asarray(sis.n).T[valid_mask]
-    directions = np.asarray(sis.wi).T[valid_mask]
+    directions = directions[valid_mask]
     return positions, directions, normals
