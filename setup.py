@@ -5,7 +5,7 @@ if sys.platform == "win32":
     install_requires = ['open3d', 'pymeshlab==2023.12.post1']
 else:
     install_requires = ['open3d', 'pymeshlab']
-install_requires += ['tqdm', 'trimesh', 'rtree']
+install_requires += ['tqdm', 'trimesh', 'rtree', 'mitsuba', 'pytorch3d']
 
 setup(
     name="virtual_scanner",
