@@ -17,23 +17,18 @@ def mitsuba_intersect(mesh: trimesh.Trimesh, origins: np.ndarray, directions: np
     :return: (position, direction, normal)
     """
 
-    with tempfile.NamedTemporaryFile(suffix=".ply", delete=False) as temp_file:
+    with tempfile.NamedTemporaryFile(suffix=".ply", delete=True) as temp_file:
         temp_mesh_path = temp_file.name  # 获取临时文件路径
-    mesh.export(temp_mesh_path)
+        mesh.export(temp_mesh_path)
 
-    # Mitsuba init
-    scene = mi.load_dict({
-        'type': 'scene',
-        'shape': {
-            'type': 'ply',
-            'filename': temp_mesh_path
-        }
-    })
-
-    try:
-        os.remove(temp_mesh_path)
-    except Exception as e:
-        print(f"Failed to delete temporary file: {e}")
+        # Mitsuba init
+        scene = mi.load_dict({
+            'type': 'scene',
+            'shape': {
+                'type': 'ply',
+                'filename': temp_mesh_path
+            }
+        })
 
     ray = mi.Ray3f(o=mi.Point3f(origins.T.astype(np.float32)), d=mi.Vector3f(directions.T.astype(np.float32)))
     sis = scene.ray_intersect(ray)
