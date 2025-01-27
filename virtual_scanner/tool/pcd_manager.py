@@ -95,6 +95,8 @@ class PointCloudManager:
         return len(self.point_cloud['positions'])
     
     def __getitem__(self, indices):
+        if isinstance(indices, str):
+            return self.point_cloud[indices]
         return self.slice(indices)
     
     @classmethod
