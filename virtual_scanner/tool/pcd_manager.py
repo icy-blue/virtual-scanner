@@ -32,7 +32,7 @@ class PointCloudManager:
 
     def add(self, lazy=True, **kwargs):
         self._check_shape(kwargs)
-        if lazy:
+        if lazy and len(self.point_cloud.keys()) != 0:
             self.lazy_list.append(kwargs)
             return
         if len(self.point_cloud.keys()) == 0:
@@ -110,6 +110,8 @@ class PointCloudManager:
         return len(self.point_cloud['positions'])
     
     def __getitem__(self, indices):
+        if len(self.lazy_list) != 0:
+            self.lazy_process()
         if isinstance(indices, str):
             return self.point_cloud[indices]
         return self.slice(indices)
