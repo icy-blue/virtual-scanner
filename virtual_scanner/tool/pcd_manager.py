@@ -4,9 +4,11 @@ import math
 from typing import List, Dict
 
 class PointCloudManager:
-    def __init__(self, split_length=5000_0000):
+    def __init__(self, split_length=5000_0000, deduplication_precision=1e-6):
         self.point_cloud = {}
         self.split_length = split_length
+        self.lazy_list = []
+        self.deduplication_precision = deduplication_precision
 
     @classmethod
     def read_o3d_pcd(cls, path: str):
@@ -21,8 +23,18 @@ class PointCloudManager:
     def merge(self, point_cloud: 'PointCloudManager'):
         self.add(**point_cloud.point_cloud)
 
-    def add(self, **kwargs):
+    def lazy_process(self):
+        if len(self.lazy_list) == 0:
+            return
+        for item in self.lazy_list:
+            self.add(lazy=False, **item)
+        self.lazy_list = []
+
+    def add(self, lazy=True, **kwargs):
         self._check_shape(kwargs)
+        if lazy:
+            self.lazy_list.append(kwargs)
+            return
         if len(self.point_cloud.keys()) == 0:
             for key, value in kwargs.items():
                 self.point_cloud[key] = value
@@ -61,6 +73,9 @@ class PointCloudManager:
                 assert length == self.point_cloud[key].shape[0], f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
     
     def save(self, path: str, split: bool = True):
+        if len(self.lazy_list) != 0:
+            self.lazy_process()
+        self.deduplicate()
         path = path[:-4] if path.endswith('.pcd') else path
         pcd = o3d.t.geometry.PointCloud()
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
@@ -108,3 +123,14 @@ class PointCloudManager:
         if len(pcd.normals) > 0:
             manager.point_cloud['normals'] = np.asarray(pcd.normals)
         return manager
+
+    def deduplicate(self, precision=None):
+        if len(self.lazy_list) != 0:
+            self.lazy_process()
+        if precision is None:
+            precision = self.deduplication_precision
+        xyz = self.point_cloud['positions']
+        scaled_points = np.round(xyz / precision).astype(np.int64)
+        _, unique_indices = np.unique(scaled_points, axis=0, return_index=True)
+        for key, value in self.point_cloud.items():
+            self.point_cloud[key] = value[indices]
