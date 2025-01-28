@@ -133,4 +133,4 @@ class PointCloudManager:
         scaled_points = np.round(xyz / precision).astype(np.int64)
         _, unique_indices = np.unique(scaled_points, axis=0, return_index=True)
         for key, value in self.point_cloud.items():
-            self.point_cloud[key] = value[indices]
+            self.point_cloud[key] = value[unique_indices]
