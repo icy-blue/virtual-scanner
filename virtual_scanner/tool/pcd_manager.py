@@ -51,7 +51,8 @@ class PointCloudManager:
             if point_length is None:
                 point_length = value.shape[0]
             else:
-                assert point_length == value.shape[0], f"The number of points is not the same, {point_length} != {value.shape[0]}"
+                assert point_length == value.shape[0], \
+                    f"The number of points is not the same, {point_length} != {value.shape[0]}"
         return point_cloud
     
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]'):
@@ -62,15 +63,18 @@ class PointCloudManager:
             for key in point_clouds[0].keys():
                 self.point_cloud[key] = np.vstack([point_cloud[key] for point_cloud in point_clouds])
             return
-        assert set(self.point_cloud.keys()) == set(point_clouds[0].keys()), f"Keys of point clouds are not the same, {self.point_cloud.keys()} != {point_clouds[0].keys()}"
+        assert set(self.point_cloud.keys()) == set(point_clouds[0].keys()), \
+            f"Keys of point clouds are not the same, {self.point_cloud.keys()} != {point_clouds[0].keys()}"
         for key in self.point_cloud.keys():
-            self.point_cloud[key] = np.vstack([self.point_cloud[key], *[point_cloud[key] for point_cloud in point_clouds]])
+            self.point_cloud[key] = np.vstack([self.point_cloud[key],
+                                               *[point_cloud[key] for point_cloud in point_clouds]])
         length = None
         for key in self.point_cloud.keys():
             if length is None:
                 length = self.point_cloud[key].shape[0]
             else:
-                assert length == self.point_cloud[key].shape[0], f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
+                assert length == self.point_cloud[key].shape[0], \
+                    f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
     
     def save(self, path: str, split: bool = True):
         if len(self.lazy_list) != 0:
@@ -91,7 +95,11 @@ class PointCloudManager:
                 pcd.point[key] = o3d.core.Tensor(value[start:end])
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
 
-    def slice(self, indices: np.ndarray):
+    def slice(self, indices: np.ndarray, update: bool = False):
+        if update:
+            for key, value in self.point_cloud.items():
+                self.point_cloud[key] = value[indices]
+            return
         sliced = PointCloudManager()
         for key, value in self.point_cloud.items():
             sliced.point_cloud[key] = value[indices]
@@ -133,6 +141,12 @@ class PointCloudManager:
             precision = self.deduplication_precision
         xyz = self.point_cloud['positions']
         scaled_points = np.round(xyz / precision).astype(np.int64)
-        _, unique_indices = np.unique(scaled_points, axis=0, return_index=True)
-        for key, value in self.point_cloud.items():
-            self.point_cloud[key] = value[unique_indices]
+        _, indices = np.unique(scaled_points, axis=0, return_index=True)
+        self.slice(indices, update=True)
+
+    def remove_invalid_points(self):
+        if len(self.lazy_list) != 0:
+            self.lazy_process()
+        xyz = self.point_cloud['positions']
+        valid_mask = np.isfinite(xyz).all(axis=1)
+        self.slice(valid_mask, update=True)
