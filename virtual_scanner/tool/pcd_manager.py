@@ -3,6 +3,7 @@ import numpy as np
 import math
 from typing import List, Dict
 
+
 class PointCloudManager:
     def __init__(self, split_length=5000_0000, deduplication_precision=1e-6):
         self.point_cloud = {}
@@ -42,7 +43,7 @@ class PointCloudManager:
         assert set(self.point_cloud.keys()) == set(kwargs.keys()), "Keys of point clouds are not the same"
         for key, value in kwargs.items():
             self.point_cloud[key] = np.vstack([self.point_cloud[key], value])
-    
+
     def _check_shape(self, point_cloud: Dict[str, np.ndarray]):
         point_length = None
         for key, value in point_cloud.items():
@@ -54,7 +55,7 @@ class PointCloudManager:
                 assert point_length == value.shape[0], \
                     f"The number of points is not the same, {point_length} != {value.shape[0]}"
         return point_cloud
-    
+
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]'):
         if len(point_clouds) == 0:
             return
@@ -75,7 +76,7 @@ class PointCloudManager:
             else:
                 assert length == self.point_cloud[key].shape[0], \
                     f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
-    
+
     def save(self, path: str, split: bool = True):
         if len(self.lazy_list) != 0:
             self.lazy_process()
@@ -104,7 +105,7 @@ class PointCloudManager:
         for key, value in self.point_cloud.items():
             sliced.point_cloud[key] = value[indices]
         return sliced
-    
+
     def to_simple_o3d_pcd(self) -> o3d.geometry.PointCloud:
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(self.point_cloud['positions'])
@@ -115,15 +116,15 @@ class PointCloudManager:
         return pcd
 
     def __len__(self):
-        return len(self.point_cloud['positions'])
-    
+        return len(self['positions'])
+
     def __getitem__(self, indices):
         if len(self.lazy_list) != 0:
             self.lazy_process()
         if isinstance(indices, str):
             return self.point_cloud[indices]
         return self.slice(indices)
-    
+
     @classmethod
     def from_simple_o3d_pcd(cls, pcd: o3d.geometry.PointCloud) -> 'PointCloudManager':
         manager = cls()
@@ -135,18 +136,14 @@ class PointCloudManager:
         return manager
 
     def deduplicate(self, precision=None):
-        if len(self.lazy_list) != 0:
-            self.lazy_process()
         if precision is None:
             precision = self.deduplication_precision
-        xyz = self.point_cloud['positions']
+        xyz = self['positions']
         scaled_points = np.round(xyz / precision).astype(np.int64)
         _, indices = np.unique(scaled_points, axis=0, return_index=True)
         self.slice(indices, update=True)
 
     def remove_invalid_points(self):
-        if len(self.lazy_list) != 0:
-            self.lazy_process()
-        xyz = self.point_cloud['positions']
+        xyz = self['positions']
         valid_mask = np.isfinite(xyz).all(axis=1)
         self.slice(valid_mask, update=True)
