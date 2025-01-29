@@ -2,6 +2,7 @@ import open3d as o3d
 import numpy as np
 import math
 from typing import List, Dict
+import os
 
 
 class PointCloudManager:
@@ -13,12 +14,17 @@ class PointCloudManager:
 
     @classmethod
     def read_o3d_pcd(cls, path: str):
+        if not os.path.exists(path):
+            raise FileNotFoundError
+        if os.path.getsize(path) == 0:
+            raise RuntimeError(f"File {path} is empty.")
         pcd = o3d.t.io.read_point_cloud(path)
         my_pcd = cls()
         pcd_dict = {}
         for key in pcd.point:
             pcd_dict[key] = pcd.point[key].numpy()
         my_pcd.add(**pcd_dict)
+        print(f"Log: read keys {pcd_dict.keys()}")
         return my_pcd
 
     def merge(self, point_cloud: 'PointCloudManager'):
