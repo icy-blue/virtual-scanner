@@ -14,7 +14,6 @@ setup(
     author_email="i@icys.top",
     description="A virtual scanner using open3d",
     packages=find_packages(),
-    classifiers=[],
     install_requires=install_requires,
     python_requires='>=3.8',
 )
