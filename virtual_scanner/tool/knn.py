@@ -85,7 +85,7 @@ class KNN:
             print('bounding:', bound_min[:3].tolist(), bound_max[:3].tolist())
             print('grids length:', len(grid_points))
 
-        with tqdm(total=pc0.shape[0], leave=False) as _t:
+        with tqdm(total=pc0.shape[0], leave=False, disable=not verbose) as _t:
             for index, _ijk in enumerate(grid_points):
                 if verbose:
                     print('processing:', _ijk.tolist())
@@ -159,7 +159,7 @@ class KNN:
             print('bounding:', bound_min[:3].tolist(), bound_max[:3].tolist())
             print('grids length:', len(grid_points))
 
-        with tqdm(total=pc.shape[0], leave=False) as _t:
+        with tqdm(total=pc.shape[0], leave=False, disable=not verbose) as _t:
             for grid_point in grid_points:
                 block_mask = cls.compute_mask(points, grid_point, grid_point + grid_length)
                 block_indices = torch.where(block_mask)[0]

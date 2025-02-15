@@ -60,9 +60,10 @@ class LidarScanner:
 
         sampled_points, face_indices = mesh.sample(self.remap_sample_count, return_index=True)
         if self.remap_sample_count >= 1e6:
-            _, _idx = knn.huge_point_cloud_nn(noisy_point_cloud, sampled_points, grid_length=0.5, expand_length=0.1)
+            _, _idx = knn.huge_point_cloud_nn(noisy_point_cloud, sampled_points, grid_length=0.5, expand_length=0.1,
+                                              verbose=False)
         else:
-            _, _idx = knn.minibatch_nn(noisy_point_cloud, sampled_points)
+            _, _idx = knn.minibatch_nn(noisy_point_cloud, sampled_points, verbose=False)
         normal = mesh.face_normals[face_indices[_idx]]
 
         return noisy_point_cloud, normal, noisy_rays_world
