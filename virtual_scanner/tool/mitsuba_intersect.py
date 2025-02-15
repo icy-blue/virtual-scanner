@@ -1,14 +1,14 @@
-import os
 import tempfile
-from typing import Tuple
+from typing import Tuple, Any
 import numpy as np
 import trimesh
 import mitsuba as mi
+import open3d as o3d
 
 mi.set_variant("cuda_ad_rgb")
 
-def mitsuba_intersect(mesh: trimesh.Trimesh, origins: np.ndarray, directions: np.ndarray) \
-        -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def mitsuba_intersect(mesh: Any[trimesh.Trimesh, o3d.geometry.TriangleMesh], origins: np.ndarray,
+                      directions: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     mitsuba 求交
     :param mesh: 三角网格模型
@@ -19,7 +19,10 @@ def mitsuba_intersect(mesh: trimesh.Trimesh, origins: np.ndarray, directions: np
 
     with tempfile.NamedTemporaryFile(suffix=".ply", delete=True) as temp_file:
         temp_mesh_path = temp_file.name  # 获取临时文件路径
-        mesh.export(temp_mesh_path)
+        if isinstance(mesh, o3d.geometry.TriangleMesh):
+            o3d.io.write_triangle_mesh(temp_mesh_path, mesh)
+        elif isinstance(mesh, trimesh.Trimesh):
+            mesh.export(temp_mesh_path)
 
         # Mitsuba init
         scene = mi.load_dict({
