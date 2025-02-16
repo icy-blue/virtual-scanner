@@ -7,7 +7,7 @@ import open3d as o3d
 
 mi.set_variant("cuda_ad_rgb")
 
-def mitsuba_intersect(mesh: Any[trimesh.Trimesh, o3d.geometry.TriangleMesh], origins: np.ndarray,
+def mitsuba_intersect(mesh: Any, origins: np.ndarray,
                       directions: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     mitsuba 求交
@@ -23,6 +23,8 @@ def mitsuba_intersect(mesh: Any[trimesh.Trimesh, o3d.geometry.TriangleMesh], ori
             o3d.io.write_triangle_mesh(temp_mesh_path, mesh)
         elif isinstance(mesh, trimesh.Trimesh):
             mesh.export(temp_mesh_path)
+        else:
+            raise NotImplementedError('Detected type', type(mesh))
 
         # Mitsuba init
         scene = mi.load_dict({
