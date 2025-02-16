@@ -131,6 +131,10 @@ class PointCloudManager:
         return pcd
 
     def __len__(self):
+        if len(self.lazy_list) != 0:
+            self.lazy_process()
+        if 'positions' not in self.point_cloud:
+            return 0
         return len(self['positions'])
 
     def __getitem__(self, indices):
