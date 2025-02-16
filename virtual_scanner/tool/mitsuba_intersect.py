@@ -18,13 +18,15 @@ def mitsuba_intersect(mesh: Any, origins: np.ndarray,
     """
 
     with tempfile.NamedTemporaryFile(suffix=".ply", delete=True) as temp_file:
-        temp_mesh_path = temp_file.name  # 获取临时文件路径
         if isinstance(mesh, o3d.geometry.TriangleMesh):
-            o3d.io.write_triangle_mesh(temp_mesh_path, mesh)
+            faces = np.asarray(mesh.triangles)
         elif isinstance(mesh, trimesh.Trimesh):
-            mesh.export(temp_mesh_path)
+            faces = np.asarray(mesh.faces)
         else:
             raise NotImplementedError('Detected type', type(mesh))
+        vertices = np.asarray(mesh.vertices)
+        new_mesh = trimesh.Trimesh(vertices, faces)
+        new_mesh.export(temp_file.name)
 
         # Mitsuba init
         scene = mi.load_dict({
