@@ -33,7 +33,7 @@ def mitsuba_intersect(mesh: Any, origins: np.ndarray,
             'type': 'scene',
             'shape': {
                 'type': 'ply',
-                'filename': temp_mesh_path
+                'filename': temp_file.name
             }
         })
 
