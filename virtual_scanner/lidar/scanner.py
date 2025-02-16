@@ -9,12 +9,14 @@ from ..tool import KNN as knn, mitsuba_intersect
 class LidarScanner:
     def __init__(self,
                  lidar: Lidar,
+                 scanner_id: int,
                  remap_sample_count: int = 100000):
         """
         :param lidar: Lidar instance
         :param remap_sample_count: 修正法向时采样点数量
         """
         self.lidar = lidar
+        self.scanner_id = scanner_id
         self.remap_sample_count = remap_sample_count
 
     
