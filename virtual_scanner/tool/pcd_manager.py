@@ -1,3 +1,4 @@
+import sys
 import open3d as o3d
 import numpy as np
 import math
@@ -6,11 +7,12 @@ import os
 
 
 class PointCloudManager:
-    def __init__(self, split_length=5000_0000, deduplication_precision=1e-6):
+    def __init__(self, split_length=5000_0000, deduplication_precision=1e-6, auto_deduplicate=True):
         self.point_cloud = {}
         self.split_length = split_length
         self.lazy_list = []
         self.deduplication_precision = deduplication_precision
+        self.auto_deduplicate = auto_deduplicate
 
     @classmethod
     def read_o3d_pcd(cls, path: str):
@@ -86,7 +88,14 @@ class PointCloudManager:
     def save(self, path: str, split: bool = True):
         if len(self.lazy_list) != 0:
             self.lazy_process()
-        self.deduplicate()
+        if self.auto_deduplicate:
+            old_points = len(self)
+            indices = self.deduplicate()
+            if len(indices) != old_points:
+                print(f'Warning: {old_points - len(indices)} points are duplicated '
+                      f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
+                print(f'Filepath: {path}', file=sys.stderr)
+                print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
         path = path[:-4] if path.endswith('.pcd') else path
         pcd = o3d.t.geometry.PointCloud()
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
@@ -147,7 +156,9 @@ class PointCloudManager:
         xyz = self['positions']
         scaled_points = np.round(xyz / precision).astype(np.int64)
         _, indices = np.unique(scaled_points, axis=0, return_index=True)
-        self.slice(indices, update=True)
+        if len(indices) != len(self):
+            self.slice(indices, update=True)
+        return indices
 
     def remove_invalid_points(self):
         xyz = self['positions']
