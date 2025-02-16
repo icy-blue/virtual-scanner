@@ -92,7 +92,7 @@ class PointCloudManager:
             old_points = len(self)
             indices = self.deduplicate()
             if len(indices) != old_points:
-                print(f'Warning: {old_points - len(indices)} points are duplicated '
+                print(f'Warning: {old_points - len(indices)} of {old_points} points are duplicated '
                       f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
                 print(f'Filepath: {path}', file=sys.stderr)
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
