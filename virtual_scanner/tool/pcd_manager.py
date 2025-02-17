@@ -148,6 +148,21 @@ class PointCloudManager:
             return self.point_cloud[indices]
         return self.slice(indices)
 
+    def __setitem__(self, indices, value):
+        if len(self.lazy_list) != 0:
+            self.lazy_process()
+        if not isinstance(value, np.ndarray):
+            value = np.array(value)
+        if value.shape == 1:
+            value = value.reshape([-1, 1])
+        if not isinstance(indices, str):
+            raise ValueError(f'indices must be a string but {type(indices)} is given')
+        length = len(self)
+        if length != value.shape[0]:
+            raise ValueError(f'Value should be same length as point cloud, '
+                             f'found {value.shape[0]} != pcd\' length {length}')
+        self.point_cloud[indices] = value
+
     def __contains__(self, item):
         if isinstance(item, str):
             return item in self.point_cloud
