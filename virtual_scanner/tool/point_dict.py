@@ -50,11 +50,10 @@ class PointDict:
 
     def to_pcd_manager(self):
         manager = PointCloudManager()
-        for k, v in self.data.items():
-            if k == self.primary_key:
-                manager['positions'] = v
-            else:
-                manager[k] = v
+        pos = self[self.primary_key]
+        self.data.pop(self.primary_key)
+        self['positions'] = pos
+        manager.add(**self.data, lazy=False)
         return manager
 
     @classmethod
