@@ -144,6 +144,11 @@ class PointCloudManager:
             return self.point_cloud[indices]
         return self.slice(indices)
 
+    def __contains__(self, item):
+        if isinstance(item, str):
+            return item in self.point_cloud
+        raise NotImplementedError(item)
+
     @classmethod
     def from_simple_o3d_pcd(cls, pcd: o3d.geometry.PointCloud) -> 'PointCloudManager':
         manager = cls()
