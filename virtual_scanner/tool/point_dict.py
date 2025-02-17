@@ -5,6 +5,10 @@ from pcd_manager import PointCloudManager
 
 class PointDict:
     def __init__(self, primary_key: str, _type: str = 'numpy'):
+        """
+        :param primary_key: 主键，用于对接 PointCloudManager 及计算点数
+        :param _type: 可选 `numpy` `torch` `torch-cuda`
+        """
         self.data = {}
         self.meta_data = {}
         self.primary_key = primary_key
@@ -19,13 +23,15 @@ class PointDict:
         if self.type == 'numpy':
             if isinstance(value, torch.Tensor):
                 value = value.detach().cpu().numpy()
-            else:
+            elif not isinstance(value, np.ndarray):
                 value = np.array(value)
-        elif self.type == 'torch':
+        elif self.type[:5] == 'torch':
             if isinstance(value, np.ndarray):
                 value = torch.from_numpy(value)
-            else:
+            elif not isinstance(value, torch.Tensor):
                 value = torch.Tensor(value)
+            if self.type == 'torch-cuda':
+                value = value.cuda()
         self.data[key] = value
 
     def __len__(self):
@@ -47,6 +53,11 @@ class PointDict:
         for k, v in self.data.items():
             new.data[k] = v[item]
         return new
+
+    def change_type(self, new_type):
+        self.type = new_type
+        for k, v in self.data.items():
+            self[k] = v
 
     def to_pcd_manager(self):
         manager = PointCloudManager()
