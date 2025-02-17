@@ -118,6 +118,7 @@ class PointCloudManager:
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
 
     def slice(self, indices: np.ndarray, update: bool = False) -> 'Self':
+        self.process_lazy()
         if update:
             for key, value in self.point_cloud.items():
                 self.point_cloud[key] = value[indices]
