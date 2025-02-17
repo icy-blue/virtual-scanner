@@ -2,12 +2,15 @@ import sys
 import open3d as o3d
 import numpy as np
 import math
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional, Self, Union
 import os
 
 
 class PointCloudManager:
-    def __init__(self, split_length=5000_0000, deduplication_precision=1e-6, auto_deduplicate=True):
+    def __init__(self,
+                 split_length: int = 5000_0000,
+                 deduplication_precision: float = 1e-6,
+                 auto_deduplicate: bool = True):
         self.point_cloud = {}
         self.split_length = split_length
         self.lazy_list = []
@@ -15,7 +18,7 @@ class PointCloudManager:
         self.auto_deduplicate = auto_deduplicate
 
     @classmethod
-    def read_o3d_pcd(cls, path: str):
+    def read_o3d_pcd(cls, path: str) -> 'Self':
         if not os.path.exists(path):
             raise FileNotFoundError
         if os.path.getsize(path) == 0:
@@ -29,17 +32,17 @@ class PointCloudManager:
         print(f"Log: read keys {pcd_dict.keys()}")
         return my_pcd
 
-    def merge(self, point_cloud: 'PointCloudManager'):
+    def merge(self, point_cloud: 'PointCloudManager') -> None:
         self.add(**point_cloud.point_cloud)
 
-    def process_lazy(self):
+    def process_lazy(self) -> None:
         if len(self.lazy_list) == 0:
             return
         for item in self.lazy_list:
             self.add(lazy=False, **item)
-        self.lazy_list = []
+        self.lazy_list.clear()
 
-    def add(self, lazy=True, **kwargs):
+    def add(self, lazy: bool = True, **kwargs) -> None:
         self._check_shape(kwargs)
         if lazy and len(self.point_cloud.keys()) != 0:
             self.lazy_list.append(kwargs)
@@ -52,7 +55,7 @@ class PointCloudManager:
         for key, value in kwargs.items():
             self.point_cloud[key] = np.vstack([self.point_cloud[key], value])
 
-    def _check_shape(self, point_cloud: Dict[str, np.ndarray]):
+    def _check_shape(self, point_cloud: 'Dict[str, np.ndarray]') -> 'Dict[str, np.ndarray]':
         point_length = None
         for key, value in point_cloud.items():
             if len(value.shape) == 1:
@@ -64,7 +67,7 @@ class PointCloudManager:
                     f"The number of points is not the same, {point_length} != {value.shape[0]}"
         return point_cloud
 
-    def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]'):
+    def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]') -> None:
         if len(point_clouds) == 0:
             return
         point_clouds = [self._check_shape(point_cloud) for point_cloud in point_clouds]
@@ -85,7 +88,7 @@ class PointCloudManager:
                 assert length == self.point_cloud[key].shape[0], \
                     f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
 
-    def save(self, path: str, split: bool = True):
+    def save(self, path: str, split: bool = True) -> None:
         self.process_lazy()
         if self.auto_deduplicate:
             old_points = len(self)
@@ -114,7 +117,7 @@ class PointCloudManager:
                 pcd.point[key] = o3d.core.Tensor(value[start:end])
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
 
-    def slice(self, indices: np.ndarray, update: bool = False):
+    def slice(self, indices: np.ndarray, update: bool = False) -> 'Self':
         if update:
             for key, value in self.point_cloud.items():
                 self.point_cloud[key] = value[indices]
@@ -139,7 +142,7 @@ class PointCloudManager:
             return 0
         return len(self['positions'])
 
-    def __getitem__(self, indices) -> Any:
+    def __getitem__(self, indices) -> 'Union[Self, np.ndarray]':
         self.process_lazy()
         if isinstance(indices, str):
             return self.point_cloud[indices]
@@ -165,7 +168,7 @@ class PointCloudManager:
         raise NotImplementedError(item)
 
     @classmethod
-    def from_simple_o3d_pcd(cls, pcd: o3d.geometry.PointCloud) -> 'PointCloudManager':
+    def from_simple_o3d_pcd(cls, pcd: 'o3d.geometry.PointCloud') -> 'PointCloudManager':
         manager = cls()
         manager.point_cloud['positions'] = np.asarray(pcd.points)
         if len(pcd.colors) > 0:
@@ -174,7 +177,7 @@ class PointCloudManager:
             manager.point_cloud['normals'] = np.asarray(pcd.normals)
         return manager
 
-    def deduplicate(self, precision: Optional[float] = None) -> np.ndarray:
+    def deduplicate(self, precision: 'Optional[float]' = None) -> np.ndarray:
         if precision is None:
             precision = self.deduplication_precision
         xyz = self['positions']
