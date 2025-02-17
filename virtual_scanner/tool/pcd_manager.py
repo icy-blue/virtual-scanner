@@ -2,7 +2,7 @@ import sys
 import open3d as o3d
 import numpy as np
 import math
-from typing import List, Dict
+from typing import List, Dict, Any, Optional
 import os
 
 
@@ -32,7 +32,7 @@ class PointCloudManager:
     def merge(self, point_cloud: 'PointCloudManager'):
         self.add(**point_cloud.point_cloud)
 
-    def lazy_process(self):
+    def process_lazy(self):
         if len(self.lazy_list) == 0:
             return
         for item in self.lazy_list:
@@ -86,8 +86,7 @@ class PointCloudManager:
                     f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
 
     def save(self, path: str, split: bool = True):
-        if len(self.lazy_list) != 0:
-            self.lazy_process()
+        self.process_lazy()
         if self.auto_deduplicate:
             old_points = len(self)
             indices = self.deduplicate()
@@ -134,23 +133,20 @@ class PointCloudManager:
             pcd.normals = o3d.utility.Vector3dVector(self.point_cloud['normals'])
         return pcd
 
-    def __len__(self):
-        if len(self.lazy_list) != 0:
-            self.lazy_process()
+    def __len__(self) -> int:
+        self.process_lazy()
         if 'positions' not in self.point_cloud:
             return 0
         return len(self['positions'])
 
-    def __getitem__(self, indices):
-        if len(self.lazy_list) != 0:
-            self.lazy_process()
+    def __getitem__(self, indices) -> Any:
+        self.process_lazy()
         if isinstance(indices, str):
             return self.point_cloud[indices]
         return self.slice(indices)
 
-    def __setitem__(self, indices, value):
-        if len(self.lazy_list) != 0:
-            self.lazy_process()
+    def __setitem__(self, indices, value) -> None:
+        self.process_lazy()
         if not isinstance(value, np.ndarray):
             value = np.array(value)
         if value.shape == 1:
@@ -163,7 +159,7 @@ class PointCloudManager:
                              f'found {value.shape[0]} != pcd\' length {length}')
         self.point_cloud[indices] = value
 
-    def __contains__(self, item):
+    def __contains__(self, item) -> bool:
         if isinstance(item, str):
             return item in self.point_cloud
         raise NotImplementedError(item)
@@ -178,7 +174,7 @@ class PointCloudManager:
             manager.point_cloud['normals'] = np.asarray(pcd.normals)
         return manager
 
-    def deduplicate(self, precision=None):
+    def deduplicate(self, precision: Optional[float] = None) -> np.ndarray:
         if precision is None:
             precision = self.deduplication_precision
         xyz = self['positions']
@@ -188,7 +184,7 @@ class PointCloudManager:
             self.slice(indices, update=True)
         return indices
 
-    def remove_invalid_points(self):
+    def remove_invalid_points(self) -> None:
         xyz = self['positions']
         valid_mask = np.isfinite(xyz).all(axis=1)
         self.slice(valid_mask, update=True)
