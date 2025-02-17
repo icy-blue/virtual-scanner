@@ -1,4 +1,7 @@
 import os
+import sys
+if sys.platform == 'darwin':
+    raise NotImplementedError('No pymeshlab plugins.')
 import pymeshlab as m
 import glob
 
