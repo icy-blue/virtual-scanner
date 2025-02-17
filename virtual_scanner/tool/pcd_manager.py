@@ -96,6 +96,10 @@ class PointCloudManager:
                       f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
                 print(f'Filepath: {path}', file=sys.stderr)
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
+        for k, v in self.point_cloud.items():
+            if k not in ['positions', 'normals', 'colors'] and v.shape[1] > 1:
+                raise ValueError(f'Open3D does not support multi-dimensional tensor named {k} ({v.shape}) '
+                                 'except `positions`, `normals` and `colors`.')
         path = path[:-4] if path.endswith('.pcd') else path
         pcd = o3d.t.geometry.PointCloud()
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
@@ -124,9 +128,9 @@ class PointCloudManager:
     def to_simple_o3d_pcd(self) -> o3d.geometry.PointCloud:
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(self.point_cloud['positions'])
-        if 'colors' in self.point_cloud:
+        if 'colors' in self:
             pcd.colors = o3d.utility.Vector3dVector(self.point_cloud['colors'])
-        if 'normals' in self.point_cloud:
+        if 'normals' in self:
             pcd.normals = o3d.utility.Vector3dVector(self.point_cloud['normals'])
         return pcd
 
