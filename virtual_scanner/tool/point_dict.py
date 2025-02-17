@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from pcd_manager import PointCloudManager
 
 
 class PointDict:
@@ -28,6 +29,8 @@ class PointDict:
         self.data[key] = value
 
     def __len__(self):
+        if self.primary_key not in self.data:
+            return 0
         return len(self.data[self.primary_key])
 
     def __contains__(self, item):
@@ -44,3 +47,20 @@ class PointDict:
         for k, v in self.data.items():
             new.data[k] = v[item]
         return new
+
+    def to_pcd_manager(self):
+        manager = PointCloudManager()
+        for k, v in self.data.items():
+            if k == self.primary_key:
+                manager['positions'] = v
+            else:
+                manager[k] = v
+        return manager
+
+    @classmethod
+    def from_pcd_manager(cls, manager: 'PointCloudManager'):
+        point_dict = cls(primary_key='positions')
+        manager.process_lazy()
+        for k, v in manager.point_cloud:
+            point_dict[k] = v
+        return point_dict
