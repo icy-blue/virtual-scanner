@@ -42,11 +42,16 @@ class PointDict:
     def __contains__(self, item):
         if isinstance(item, str):
             return self.primary_key in item
-        try:
-            _ = self.data[item]
-            return True
-        except:
-            return False
+        return False
+
+    def length_check(self):
+        assert self.primary_key in self.data
+        point_length = len(self.data[self.primary_key])
+        for k, v in self.data.items():
+            if v.shape[0] != point_length:
+                print(f'Length check failed for {k}: {v.shape[0]}, expected {point_length}.', file=sys.stderr)
+                return False
+        return True
 
     def slice(self, item):
         new = PointDict(self.primary_key)
