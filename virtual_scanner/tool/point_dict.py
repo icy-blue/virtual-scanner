@@ -21,8 +21,8 @@ class PointDict:
             return self.meta_data[item]
         return self.slice(item)
 
-    def __setitem__(self, key, value, is_meta=False):
-        if is_meta:
+    def __setitem__(self, key, value):
+        if isinstance(value, str) or np.asarray(value).size <= 1:
             self.meta_data[key] = value
             return
         if self.type == 'numpy':
