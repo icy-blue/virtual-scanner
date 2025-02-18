@@ -55,6 +55,9 @@ class PointDict:
         return new
 
     def change_type(self, new_type):
+        assert new_type in ['numpy', 'torch', 'torch-cuda']
+        if new_type == self.type:
+            return
         self.type = new_type
         for k, v in self.data.items():
             self[k] = v
