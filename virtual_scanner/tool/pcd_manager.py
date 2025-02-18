@@ -58,8 +58,8 @@ class PointCloudManager:
         print(f"Log: read keys {pcd_dict.keys()}")
         return my_pcd
 
-    def merge(self, point_cloud: 'PointCloudManager') -> None:
-        self.add(**point_cloud.point_cloud)
+    def merge(self, other: 'PointCloudManager') -> None:
+        self.add(**other.point_cloud)
 
     def process_lazy(self) -> None:
         if len(self.lazy_list) == 0:
