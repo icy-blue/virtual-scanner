@@ -18,6 +18,28 @@ class PointCloudManager:
         self.auto_deduplicate = auto_deduplicate
 
     @classmethod
+    def _merge_parts(cls, data: dict):
+        pattern = re.compile(r"^(?P<name>.+)_part(?P<index>\d+)$")
+        merged_data = defaultdict(list)
+        result = {}
+        for key, value in data.items():
+            match = pattern.match(key)
+            if match:
+                name = match.group("name")
+                index = int(match.group("index"))
+                merged_data[name].append((index, data[key]))
+            else:
+                result[key] = value
+
+        for name, parts in merged_data.items():
+            parts.sort()
+            for k, v in parts:
+                data.pop(k)
+            result[name] = np.vstack([value for _, value in parts])
+
+        return result
+
+    @classmethod
     def read_o3d_pcd(cls, path: str) -> 'Self':
         if not os.path.exists(path):
             raise FileNotFoundError
@@ -28,6 +50,7 @@ class PointCloudManager:
         pcd_dict = {}
         for key in pcd.point:
             pcd_dict[key] = pcd.point[key].numpy()
+        pcd_dict = cls._merge_parts(pcd_dict)
         my_pcd.add(**pcd_dict)
         print(f"Log: read keys {pcd_dict.keys()}")
         return my_pcd
@@ -100,8 +123,12 @@ class PointCloudManager:
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
         for k, v in self.point_cloud.items():
             if k not in ['positions', 'normals', 'colors'] and v.shape[1] > 1:
-                raise ValueError(f'Open3D does not support multi-dimensional tensor named {k} ({v.shape}) '
-                                 'except `positions`, `normals` and `colors`.')
+                if not split:
+                    raise ValueError(f'Open3D does not support multi-dimensional tensor named {k} ({v.shape}) '
+                                     'except `positions`, `normals` and `colors`.')
+                for i in range(v.shape[1]):
+                    self[f'{k}_part{i}'] = v[:, i]
+                self.point_cloud.pop(k)
         path = path[:-4] if path.endswith('.pcd') else path
         pcd = o3d.t.geometry.PointCloud()
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
