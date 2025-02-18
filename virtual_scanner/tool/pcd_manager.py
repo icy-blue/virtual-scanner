@@ -137,7 +137,7 @@ class PointCloudManager:
         path = path[:-4] if path.endswith('.pcd') else path
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
-            pcd = self._to_o3d_tpcd(split)
+            pcd = self.to_o3d_tpcd(split)
             o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
             return
         for i in range(block_num):
