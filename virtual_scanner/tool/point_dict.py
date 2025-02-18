@@ -41,7 +41,7 @@ class PointDict:
 
     def __contains__(self, item):
         if isinstance(item, str):
-            return self.primary_key in item
+            return item in self.data or item in self.meta_data
         return False
 
     def length_check(self):
