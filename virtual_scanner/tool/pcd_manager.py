@@ -185,10 +185,12 @@ class PointCloudManager:
         self.process_lazy()
         if not isinstance(value, np.ndarray):
             value = np.array(value)
-        if value.shape == 1:
+        if len(value.shape) == 1:
             value = value.reshape([-1, 1])
+        elif len(value.shape) > 2:
+            raise ValueError(f'Found invalid value (indices {indices}: shape {value.shape}).')
         if not isinstance(indices, str):
-            raise ValueError(f'indices must be a string but {type(indices)} is given')
+            raise ValueError(f'Indices must be a string but {type(indices)} is given')
         length = len(self)
         if length != value.shape[0]:
             raise ValueError(f'Value should be same length as point cloud, '
