@@ -94,6 +94,7 @@ class PointCloudManager:
         return point_cloud
 
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]') -> None:
+        print('[Warning]: `add_batch()` is deprecated and will be removed.', file=sys.stderr)
         if len(point_clouds) == 0:
             return
         point_clouds = [self._check_shape(point_cloud) for point_cloud in point_clouds]
