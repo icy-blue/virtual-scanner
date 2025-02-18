@@ -117,14 +117,14 @@ class PointCloudManager:
     def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
         pcd = o3d.t.geometry.PointCloud()
         for key, value in self.point_cloud.items():
-            if key not in ['positions', 'normals', 'colors'] and value.shape[1] > 1:
-                if not split:
-                    raise ValueError(f'Open3D does not support multi-dimensional tensor named {key} ({value.shape}) '
-                                     'except `positions`, `normals` and `colors`.')
-                for i in range(value.shape[1]):
-                    pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
-            else:
+            if key in ['positions', 'normals', 'colors'] or value.shape[1] == 1:
                 pcd.point[key] = o3d.core.Tensor(value)
+                continue
+            if not split:
+                raise ValueError(f'Open3D does not support multi-dimensional tensor named {key} ({value.shape}) '
+                                 'except `positions`, `normals` and `colors`.')
+            for i in range(value.shape[1]):
+                pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
         return pcd
 
     def save(self, path: str, split: bool = True) -> None:
