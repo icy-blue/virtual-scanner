@@ -7,7 +7,7 @@ elif sys.platform == "darwin":
     install_requires = ['open3d']
 else:
     install_requires = ['open3d', 'pymeshlab']
-install_requires += ['tqdm', 'trimesh', 'rtree', 'mitsuba', 'pytorch3d']
+install_requires += ['tqdm', 'trimesh', 'rtree', 'mitsuba', 'pytorch3d', 'pytz']
 
 setup(
     name="virtual_scanner",

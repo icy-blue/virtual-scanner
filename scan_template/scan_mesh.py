@@ -1,5 +1,4 @@
 import glob
-import math
 import os
 from datetime import datetime
 from pytz import timezone
