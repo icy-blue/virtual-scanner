@@ -111,6 +111,19 @@ class PointCloudManager:
                 assert length == self.point_cloud[key].shape[0], \
                     f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
 
+    def to_o3d_tpcd(self):
+        pcd = o3d.t.geometry.PointCloud()
+        for key, value in self.point_cloud.items():
+            if key not in ['positions', 'normals', 'colors'] and value.shape[1] > 1:
+                if not split:
+                    raise ValueError(f'Open3D does not support multi-dimensional tensor named {key} ({value.shape}) '
+                                     'except `positions`, `normals` and `colors`.')
+                for i in range(value.shape[1]):
+                    pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
+            else:
+                pcd.point[key] = o3d.core.Tensor(value)
+        return pcd
+
     def save(self, path: str, split: bool = True) -> None:
         self.process_lazy()
         if self.auto_deduplicate:
@@ -121,27 +134,15 @@ class PointCloudManager:
                       f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
                 print(f'Filepath: {path}', file=sys.stderr)
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
-        for k, v in self.point_cloud.items():
-            if k not in ['positions', 'normals', 'colors'] and v.shape[1] > 1:
-                if not split:
-                    raise ValueError(f'Open3D does not support multi-dimensional tensor named {k} ({v.shape}) '
-                                     'except `positions`, `normals` and `colors`.')
-                for i in range(v.shape[1]):
-                    self[f'{k}_part{i}'] = v[:, i]
-                self.point_cloud.pop(k)
         path = path[:-4] if path.endswith('.pcd') else path
-        pcd = o3d.t.geometry.PointCloud()
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
-            for key, value in self.point_cloud.items():
-                pcd.point[key] = o3d.core.Tensor(value)
+            pcd = self._to_o3d_tpcd()
             o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
             return
         for i in range(block_num):
-            start = i * self.split_length
-            end = min((i + 1) * self.split_length, len(self.point_cloud['positions']))
-            for key, value in self.point_cloud.items():
-                pcd.point[key] = o3d.core.Tensor(value[start:end])
+            part = self[(i * self.split_length):((i + 1) * self.split_length)]
+            pcd = part.to_o3d_tpcd()
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
 
     def slice(self, indices: np.ndarray, update: bool = False) -> 'Self':
