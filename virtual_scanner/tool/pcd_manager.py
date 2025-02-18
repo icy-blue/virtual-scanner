@@ -1,4 +1,7 @@
+import re
 import sys
+from collections import defaultdict
+
 import open3d as o3d
 import numpy as np
 import math
