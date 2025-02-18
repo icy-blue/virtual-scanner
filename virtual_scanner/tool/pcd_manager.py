@@ -122,7 +122,7 @@ class PointCloudManager:
                 pcd.point[key] = o3d.core.Tensor(value)
                 continue
             if not split:
-                raise ValueError(f'Open3D does not support multi-dimensional tensor named {key} ({value.shape}) '
+                raise ValueError(f'Open3D does not support multi-dimensional tensor （key {key} has shape {value.shape}) '
                                  'except `positions`, `normals` and `colors`.')
             for i in range(value.shape[1]):
                 pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
