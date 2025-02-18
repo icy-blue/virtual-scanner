@@ -111,7 +111,7 @@ class PointCloudManager:
                 assert length == self.point_cloud[key].shape[0], \
                     f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
 
-    def to_o3d_tpcd(self):
+    def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
         pcd = o3d.t.geometry.PointCloud()
         for key, value in self.point_cloud.items():
             if key not in ['positions', 'normals', 'colors'] and value.shape[1] > 1:
@@ -137,12 +137,12 @@ class PointCloudManager:
         path = path[:-4] if path.endswith('.pcd') else path
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
-            pcd = self._to_o3d_tpcd()
+            pcd = self._to_o3d_tpcd(split)
             o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
             return
         for i in range(block_num):
             part = self[(i * self.split_length):((i + 1) * self.split_length)]
-            pcd = part.to_o3d_tpcd()
+            pcd = part.to_o3d_tpcd(split)
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
 
     def slice(self, indices: np.ndarray, update: bool = False) -> 'Self':
