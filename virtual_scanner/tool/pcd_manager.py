@@ -1,4 +1,7 @@
+import re
 import sys
+from collections import defaultdict
+
 import open3d as o3d
 import numpy as np
 import math
@@ -19,6 +22,28 @@ class PointCloudManager:
         self.auto_deduplicate = auto_deduplicate
 
     @classmethod
+    def _merge_parts(cls, data: dict):
+        pattern = re.compile(r"^(?P<name>.+)_part(?P<index>\d+)$")
+        merged_data = defaultdict(list)
+        result = {}
+        for key, value in data.items():
+            match = pattern.match(key)
+            if match:
+                name = match.group("name")
+                index = int(match.group("index"))
+                merged_data[name].append((index, data[key]))
+            else:
+                result[key] = value
+
+        for name, parts in merged_data.items():
+            parts.sort()
+            for k, v in parts:
+                data.pop(k)
+            result[name] = np.vstack([value for _, value in parts])
+
+        return result
+
+    @classmethod
     def read_o3d_pcd(cls, path: str) -> 'Self':
         if not os.path.exists(path):
             raise FileNotFoundError
@@ -29,12 +54,13 @@ class PointCloudManager:
         pcd_dict = {}
         for key in pcd.point:
             pcd_dict[key] = pcd.point[key].numpy()
+        pcd_dict = cls._merge_parts(pcd_dict)
         my_pcd.add(**pcd_dict)
         print(f"Log: read keys {pcd_dict.keys()}")
         return my_pcd
 
-    def merge(self, point_cloud: 'PointCloudManager') -> None:
-        self.add(**point_cloud.point_cloud)
+    def merge(self, other: 'PointCloudManager') -> None:
+        self.add(**other.point_cloud)
 
     def process_lazy(self) -> None:
         if len(self.lazy_list) == 0:
@@ -69,6 +95,7 @@ class PointCloudManager:
         return point_cloud
 
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]') -> None:
+        print('[Warning]: `add_batch()` is deprecated and will be removed.', file=sys.stderr)
         if len(point_clouds) == 0:
             return
         point_clouds = [self._check_shape(point_cloud) for point_cloud in point_clouds]
@@ -89,6 +116,19 @@ class PointCloudManager:
                 assert length == self.point_cloud[key].shape[0], \
                     f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
 
+    def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
+        pcd = o3d.t.geometry.PointCloud()
+        for key, value in self.point_cloud.items():
+            if key in ['positions', 'normals', 'colors'] or value.shape[1] == 1:
+                pcd.point[key] = o3d.core.Tensor(value)
+                continue
+            if not split:
+                raise ValueError(f'Open3D does not support multi-dimensional tensor （key {key} has shape {value.shape}) '
+                                 'except `positions`, `normals` and `colors`.')
+            for i in range(value.shape[1]):
+                pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
+        return pcd
+
     def save(self, path: str, split: bool = True) -> None:
         self.process_lazy()
         if self.auto_deduplicate:
@@ -99,23 +139,15 @@ class PointCloudManager:
                       f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
                 print(f'Filepath: {path}', file=sys.stderr)
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
-        for k, v in self.point_cloud.items():
-            if k not in ['positions', 'normals', 'colors'] and v.shape[1] > 1:
-                raise ValueError(f'Open3D does not support multi-dimensional tensor named {k} ({v.shape}) '
-                                 'except `positions`, `normals` and `colors`.')
         path = path[:-4] if path.endswith('.pcd') else path
-        pcd = o3d.t.geometry.PointCloud()
         block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
         if not split or block_num == 1:
-            for key, value in self.point_cloud.items():
-                pcd.point[key] = o3d.core.Tensor(value)
+            pcd = self.to_o3d_tpcd(split)
             o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
             return
         for i in range(block_num):
-            start = i * self.split_length
-            end = min((i + 1) * self.split_length, len(self.point_cloud['positions']))
-            for key, value in self.point_cloud.items():
-                pcd.point[key] = o3d.core.Tensor(value[start:end])
+            part = self[(i * self.split_length):((i + 1) * self.split_length)]
+            pcd = part.to_o3d_tpcd(split)
             o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
 
     def slice(self, indices: np.ndarray, update: bool = False) -> 'Self':
@@ -154,10 +186,12 @@ class PointCloudManager:
         self.process_lazy()
         if not isinstance(value, np.ndarray):
             value = np.array(value)
-        if value.shape == 1:
+        if len(value.shape) == 1:
             value = value.reshape([-1, 1])
+        elif len(value.shape) > 2:
+            raise ValueError(f'Found invalid value (indices {indices}: shape {value.shape}).')
         if not isinstance(indices, str):
-            raise ValueError(f'indices must be a string but {type(indices)} is given')
+            raise ValueError(f'Indices must be a string but {type(indices)} is given')
         length = len(self)
         if length != value.shape[0]:
             raise ValueError(f'Value should be same length as point cloud, '
