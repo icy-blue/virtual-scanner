@@ -44,7 +44,7 @@ class PointCloudManager:
         return result
 
     @classmethod
-    def read_o3d_pcd(cls, path: str) -> 'Self':
+    def read_o3d_pcd(cls, path: str, verbose: bool = True) -> 'Self':
         if not os.path.exists(path):
             raise FileNotFoundError
         if os.path.getsize(path) == 0:
@@ -56,7 +56,8 @@ class PointCloudManager:
             pcd_dict[key] = pcd.point[key].numpy()
         pcd_dict = cls._merge_parts(pcd_dict)
         my_pcd.add(**pcd_dict)
-        print(f"Log: read keys {pcd_dict.keys()}")
+        if verbose:
+            print(f"Log: read keys {pcd_dict.keys()}")
         return my_pcd
 
     def merge(self, other: 'PointCloudManager') -> None:
