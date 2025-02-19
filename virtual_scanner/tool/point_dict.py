@@ -79,6 +79,6 @@ class PointDict:
     def from_pcd_manager(cls, manager: 'PointCloudManager'):
         point_dict = cls(primary_key='positions')
         manager.process_lazy()
-        for k, v in manager.point_cloud:
+        for k, v in manager.point_cloud.items():
             point_dict[k] = v
         return point_dict
