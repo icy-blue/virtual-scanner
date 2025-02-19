@@ -1,7 +1,7 @@
-from typing import Tuple
-
+import sys
 import numpy as np
-import open3d as o3d
+if sys.version_info[1] >= 9:
+    from typing import Tuple
 
 
 class Ray:
@@ -10,26 +10,31 @@ class Ray:
         self.direction = direction
 
     @classmethod
-    def from_numpy(cls, start: np.ndarray, direction: np.ndarray):
+    def from_numpy(cls, start: 'np.ndarray', direction: 'np.ndarray'):
         rays = []
         for i in range(start.shape[1]):
             rays.append(cls(start[:, i], direction[:, i]))
         return rays
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Ray(start={self.start}, direction={self.direction})"
         
 
 class Lidar:
-    def __init__(self, resolution: 'Tuple[float, float]', fov: 'Tuple[float, float, float, float]', center: 'np.ndarray',
-                 eye: 'np.ndarray', up: 'np.ndarray'):
+    def __init__(self,
+                 resolution: 'Tuple[float, float]',
+                 fov: 'Tuple[float, float, float, float]',
+                 center: 'np.ndarray',
+                 eye: 'np.ndarray',
+                 up: 'np.ndarray'
+    ):
         self.resolution = resolution
         self.fov = fov # Left, Right, Up, Down
         self.center = center
         self.eye = eye
         self.up = up
 
-    def get_extrinsics(self) -> np.ndarray:
+    def get_extrinsics(self) -> 'np.ndarray':
         z_axis = self.center - self.eye
         z_axis = z_axis / np.linalg.norm(z_axis)
 
@@ -46,7 +51,7 @@ class Lidar:
 
         return extrinsic_matrix_4x4
 
-    def get_rays(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_rays(self) -> 'Tuple[np.ndarray, np.ndarray]':
         fov_l, fov_r, fov_u, fov_d = self.fov  # 视场角度
         res_x, res_y = self.resolution
         

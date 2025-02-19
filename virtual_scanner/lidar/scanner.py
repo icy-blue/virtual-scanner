@@ -1,16 +1,18 @@
-from typing import Tuple
-
+import sys
 import numpy as np
 import trimesh
 from .lidar import Lidar
 from ..tool import KNN as knn, mitsuba_intersect
+if sys.version_info[1] >= 9:
+    from typing import Tuple
 
 
 class LidarScanner:
     def __init__(self,
-                 lidar: Lidar,
+                 lidar: 'Lidar',
                  scanner_id: int,
-                 remap_sample_count: int = 100000):
+                 remap_sample_count: int = 100000
+    ):
         """
         :param lidar: Lidar instance
         :param remap_sample_count: 修正法向时采样点数量
@@ -20,10 +22,11 @@ class LidarScanner:
         self.remap_sample_count = remap_sample_count
 
     
-    def apply_angular_noise(self, ray_lidar: np.ndarray, angle_noise_std: float) -> np.ndarray:
+    def apply_angular_noise(self, ray_lidar: 'np.ndarray', angle_noise_std: float) -> 'np.ndarray':
         """
         在Lidar的极坐标系下对角度进行噪声扰动
         :param ray_lidar: Lidar坐标系下的射线方向 (Nx3)
+        :param angle_noise_std: 角度噪声（弧度）
         :return: 加入角度噪声后的Lidar坐标系下射线方向 (Nx3)
         """
         theta, phi = self.direction_to_theta_phi(ray_lidar)
@@ -37,13 +40,20 @@ class LidarScanner:
 
         return ray_lidar_noisy
 
-    def apply_noise(self, point_cloud: np.ndarray, rays_world: np.ndarray, mesh: trimesh.Trimesh, angle_noise_std,
-                    distance_noise_std) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def apply_noise(self,
+                    point_cloud: 'np.ndarray',
+                    rays_world: 'np.ndarray',
+                    mesh: 'trimesh.Trimesh',
+                    angle_noise_std: float,
+                    distance_noise_std: float
+    ) -> 'Tuple[np.ndarray, np.ndarray, np.ndarray]':
         """
         应用角度和距离噪声，返回带噪声的点云
         :param point_cloud: 原始点云 (Nx3)
         :param rays_world: 世界坐标系下的射线方向 (Nx3)
         :param mesh: 用于扫描的mesh
+        :param angle_noise_std: 角度噪声（弧度）
+        :param distance_noise_std: 距离噪声（米）
         :return: 加入噪声后的点云和射线方向
         """
         noisy_rays_world = self.apply_angular_noise(rays_world, angle_noise_std)
@@ -65,12 +75,11 @@ class LidarScanner:
         return noisy_point_cloud, normal, noisy_rays_world
     
     def virtual_scan(self, 
-                     mesh: trimesh.Trimesh) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+                     mesh: 'trimesh.Trimesh'
+    ) -> 'Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]':
         """
         进行虚拟激光雷达扫描
         :param mesh: 三角网格模型
-        :param use_noise: 是否使用噪声
-        :param edit_normal: 是否更新法向量
         :return: 点云 (Nx3), 法向量 (Nx3), 射线方向 (Nx3)
         """
         _, rays_world = self.lidar.get_rays()
@@ -88,12 +97,10 @@ class LidarScanner:
 
         return point_cloud, normal, rays_direction_world, index_triangle, origin_dot
 
-    def virtual_scan_mitsuba(self, mesh: trimesh.Trimesh) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def virtual_scan_mitsuba(self, mesh: 'trimesh.Trimesh') -> 'Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]':
         """
         进行虚拟激光雷达扫描
         :param mesh: 三角网格模型
-        :param use_noise: 是否使用噪声
-        :param edit_normal: 是否更新法向量
         :return: 点云 (Nx3), 法向量 (Nx3), 射线方向 (Nx3), 点乘结果 (Nx3)
         """
 
@@ -107,7 +114,7 @@ class LidarScanner:
         return point_cloud, normals, directions, origin_dot
 
     @staticmethod
-    def direction_to_theta_phi(direction: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def direction_to_theta_phi(direction: 'np.ndarray') -> 'Tuple[np.ndarray, np.ndarray]':
         """
         将方向向量转换为极坐标系下的角度
         :param direction: 方向向量 (Nx3)
@@ -120,7 +127,7 @@ class LidarScanner:
         return theta, phi
 
     @staticmethod
-    def theta_phi_to_direction(theta: np.ndarray, phi: np.ndarray) -> np.ndarray:
+    def theta_phi_to_direction(theta: 'np.ndarray', phi: 'np.ndarray') -> 'np.ndarray':
         """
         将极坐标系下的角度转换为方向向量
         :param theta: 水平方向角度

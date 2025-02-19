@@ -1,5 +1,7 @@
 import tempfile
-from typing import Tuple, Any
+import sys
+if sys.version_info[1] >= 9:
+    from typing import Tuple, Any
 import numpy as np
 import trimesh
 import mitsuba as mi
@@ -7,8 +9,8 @@ import open3d as o3d
 
 mi.set_variant("cuda_ad_rgb")
 
-def mitsuba_intersect(mesh: Any, origins: np.ndarray,
-                      directions: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+def mitsuba_intersect(mesh: 'Any', origins: 'np.ndarray',
+                      directions: 'np.ndarray') -> 'Tuple[np.ndarray, np.ndarray, np.ndarray]':
     """
     mitsuba 求交
     :param mesh: 三角网格模型

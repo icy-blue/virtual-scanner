@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from pcd_manager import PointCloudManager
+from .pcd_manager import PointCloudManager
 
 
 class PointDict:

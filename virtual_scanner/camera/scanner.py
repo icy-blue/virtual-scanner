@@ -1,19 +1,22 @@
 import warnings
-from typing import Tuple, List
-
+import sys
 import numpy as np
 import open3d as o3d
 from open3d.visualization.rendering import MaterialRecord
 
 from .camera import Camera
+if sys.version_info[1] >= 9:
+    from typing import Tuple, List
 
 
 class CameraScanner:
-    def __init__(self, camera: Camera):
+    def __init__(self, camera: 'Camera'):
         self.camera = camera
 
-    def virtual_scan(self, mesh_list: List[o3d.geometry.TriangleMesh],
-                     material: MaterialRecord = MaterialRecord()) -> np.ndarray:
+    def virtual_scan(self,
+                     mesh_list: 'List[o3d.geometry.TriangleMesh]',
+                     material: 'MaterialRecord' = MaterialRecord()
+    ) -> 'np.ndarray':
         width, height = self.camera.resolution
 
         renderer = o3d.visualization.rendering.OffscreenRenderer(width, height)
@@ -31,14 +34,14 @@ class CameraScanner:
 
         return depth_image
 
-    def depth_to_point_cloud(self, depth_image: np.ndarray) -> o3d.geometry.PointCloud:
+    def depth_to_point_cloud(self, depth_image: 'np.ndarray') -> 'o3d.geometry.PointCloud':
         depth_image[depth_image == np.inf] = 0
         depth_image = o3d.geometry.Image(depth_image)
         point_cloud = o3d.geometry.PointCloud().create_from_depth_image(depth_image, self.camera.get_o3d_intrinsics(),
                                                                         self.camera.get_extrinsics())
         return point_cloud
 
-    def depth_to_polar_coord(self, depth_image: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    def depth_to_polar_coord(self, depth_image: 'np.ndarray') -> 'Tuple[np.ndarray, np.ndarray]':
         height, width = depth_image.shape[:2]
         focal_length = self.camera.get_focal_length()
 
@@ -62,8 +65,10 @@ class CameraScanner:
 
         return polar_coordinates, valid_mask
 
-    def polar_coord_to_point_cloud(self, polar_coordinates: np.ndarray,
-                                   valid_mask: np.ndarray) -> o3d.geometry.PointCloud:
+    def polar_coord_to_point_cloud(self,
+                                   polar_coordinates: 'np.ndarray',
+                                   valid_mask: 'np.ndarray'
+    ) -> 'o3d.geometry.PointCloud':
         valid_polar = polar_coordinates[valid_mask]
 
         r = valid_polar[:, 0]

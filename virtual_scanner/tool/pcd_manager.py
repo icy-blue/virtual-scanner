@@ -2,7 +2,8 @@ import sys
 import open3d as o3d
 import numpy as np
 import math
-from typing import List, Dict, Optional, Self, Union
+if sys.version_info[1] >= 9:
+    from typing import List, Dict, Optional, Self, Union
 import os
 
 

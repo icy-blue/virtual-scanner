@@ -1,6 +1,7 @@
 import sys
 import time
-from typing import Tuple, Union, Callable, Sequence
+if sys.version_info[1] >= 9:
+    from typing import Tuple, Union, Callable, Sequence, Any
 
 import numpy as np
 
@@ -12,8 +13,10 @@ from tqdm import tqdm
 
 class KNN:
     @classmethod
-    def grid_partition(cls, points: torch.Tensor, grid_length: float) -> ('Tuple[torch.Tensor, torch.Tensor, '
-                                                                          'torch.Tensor]'):
+    def grid_partition(cls,
+                       points: 'torch.Tensor',
+                       grid_length: float
+    ) -> 'Tuple[torch.Tensor, torch.Tensor, torch.Tensor]':
         device = points.device
         min_bounds = torch.floor(points.min(dim=0).values).to(device)
         max_bounds = torch.ceil(points.max(dim=0).values).to(device)
@@ -26,7 +29,7 @@ class KNN:
         return grid_points, min_bounds, max_bounds
 
     @classmethod
-    def pc_to_tensor(cls, pc: any, device: torch.device) -> torch.Tensor:
+    def pc_to_tensor(cls, pc: 'Any', device: 'torch.device') -> torch.Tensor:
         if isinstance(pc, np.ndarray):
             return torch.from_numpy(pc)[None, :, :].double().to(device)
         elif isinstance(pc, torch.Tensor):
@@ -35,8 +38,12 @@ class KNN:
             raise TypeError(f'Unknown type {type(pc)}')
 
     @classmethod
-    def minibatch_nn(
-        cls, pc0: any, pc1: any, verbose: bool = False, return_tensor: bool = False, k: int = 1
+    def minibatch_nn(cls,
+                     pc0: 'Any',
+                     pc1: 'Any',
+                     verbose: bool = False,
+                     return_tensor: bool = False,
+                     k: int = 1
     ) -> 'Union[Tuple[np.ndarray, np.ndarray], Tuple[torch.Tensor, torch.Tensor]]':
         """
         pc0 到 pc1 的最近邻 1nn
@@ -68,12 +75,22 @@ class KNN:
         return dists, idx
 
     @classmethod
-    def compute_mask(cls, positions: torch.Tensor, bound_min: torch.Tensor, bound_max: torch.Tensor) -> torch.Tensor:
+    def compute_mask(cls,
+                     positions: 'torch.Tensor',
+                     bound_min: 'torch.Tensor',
+                     bound_max: 'torch.Tensor'
+    ) -> 'torch.Tensor':
         return (torch.all(positions[:, :3] >= bound_min, dim=1)) & (torch.all(positions[:, :3] < bound_max, dim=1))
 
     @classmethod
-    def huge_point_cloud_nn(cls, pc0: any, pc1: any, grid_length: float = 10, expand_length: float = 0.5,
-                            patch_size: int = 100000, verbose: bool = False) -> 'Tuple[np.ndarray, np.ndarray]':
+    def huge_point_cloud_nn(cls,
+                            pc0: 'Any',
+                            pc1: 'Any',
+                            grid_length: float = 10,
+                            expand_length: float = 0.5,
+                            patch_size: int = 100000,
+                            verbose: bool = False
+    ) -> 'Tuple[np.ndarray, np.ndarray]':
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         pc0, pc1 = cls.pc_to_tensor(pc0, device)[0, :, :3], cls.pc_to_tensor(pc1, device)[0, :, :3]
         result = torch.zeros((pc0.shape[0], 2), dtype=torch.float32).to(device)
@@ -132,8 +149,12 @@ class KNN:
         return result[:, 0].cpu().numpy(), result[:, 1].int().cpu().numpy()
 
     @classmethod
-    def _minibatch_median(cls, pc: torch.Tensor, block_indices: torch.Tensor, neighbor_indices: torch.Tensor, k: int) \
-            -> torch.Tensor:
+    def _minibatch_median(cls,
+                          pc: 'torch.Tensor',
+                          block_indices: 'torch.Tensor',
+                          neighbor_indices: 'torch.Tensor',
+                          k: int
+    ) -> 'torch.Tensor':
         block_points = pc[block_indices, :3].unsqueeze(0)  # (1, B, 3)，其中 B 是 block 的点数
         neighbor_points = pc[neighbor_indices, :3].unsqueeze(0)  # (1, N, 3)，其中 N 是 neighbor 的点数
         neighbor_feats = pc[neighbor_indices, 3:]  # (N, m)，其中 m 是特征的维度
@@ -146,8 +167,13 @@ class KNN:
         return new_feats
 
     @classmethod
-    def huge_point_cloud_knn_mean(cls, pc: any, k: int = 20, grid_length: float = 10, expand_length: float = 2,
-                                  verbose: bool = False) -> np.ndarray:
+    def huge_point_cloud_knn_mean(cls,
+                                  pc: 'Any',
+                                  k: int = 20,
+                                  grid_length: float = 10,
+                                  expand_length: float = 2,
+                                  verbose: bool = False
+    ) -> 'np.ndarray':
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         pc = cls.pc_to_tensor(pc, device)[0]
         points, feats = pc[:, :3], pc[:, 3:]
@@ -175,9 +201,11 @@ class KNN:
         return new_feats.cpu().numpy()
 
     @classmethod
-    def huge_point_cloud_kmeans_mean_mask(cls, pc: any, patch_size: int = 100000,
-                                          calculate_split: 'Callable[[Sequence[float]], '
-                                                           'Sequence[float]]' = None) -> np.ndarray:
+    def huge_point_cloud_kmeans_mean_mask(cls,
+                                          pc: any,
+                                          patch_size: int = 100000,
+                                          calculate_split: 'Callable[[Sequence[float]], Sequence[float]]' = None
+    ) -> np.ndarray:
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         pc = cls.pc_to_tensor(pc, device)[0]
         points, feats = pc[:, :3], pc[:, 3:]
