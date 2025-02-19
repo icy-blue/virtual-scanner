@@ -1,6 +1,9 @@
+import sys
 import numpy as np
 import torch
 from .pcd_manager import PointCloudManager
+if sys.version_info[1] >= 9:
+    from typing import List, Self
 
 
 class PointDict:
@@ -87,3 +90,21 @@ class PointDict:
         for k, v in manager.point_cloud.items():
             point_dict[k] = v
         return point_dict
+
+    @classmethod
+    def collate(cls, batch: 'List[PointDict]') -> 'Self':
+        assert len(batch) > 0
+        first = batch[0]
+        result = cls(primary_key=first.primary_key, _type=first.type)
+        for k in first.data.keys():
+            values = [info[k] for info in batch]
+            if first.type == 'numpy':
+                value = np.array(values)
+            else:
+                value = torch.stack(values, dim=0)
+            if first.type == 'torch-cuda':
+                value = value.cuda()
+            result[k] = value
+        for k in first.meta_data:
+            result.meta_data[k] = [point_dict.meta_data[k] for point_dict in batch]
+        return result
