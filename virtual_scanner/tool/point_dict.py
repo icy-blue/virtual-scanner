@@ -16,10 +16,15 @@ class PointDict:
 
     def __getitem__(self, item):
         if isinstance(item, str):
-            return self.data[item]
+            if item in self.data:
+                return self.data[item]
+            return self.meta_data[item]
         return self.slice(item)
 
     def __setitem__(self, key, value):
+        if isinstance(value, str) or np.asarray(value).size <= 1:
+            self.meta_data[key] = value
+            return
         if self.type == 'numpy':
             if isinstance(value, torch.Tensor):
                 value = value.detach().cpu().numpy()
