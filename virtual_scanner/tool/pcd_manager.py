@@ -5,6 +5,9 @@ from collections import defaultdict
 import open3d as o3d
 import numpy as np
 import math
+
+import torch
+
 if sys.version_info[1] >= 9:
     from typing import List, Dict, Optional, Self, Union
 import os
@@ -70,7 +73,15 @@ class PointCloudManager:
             self.add(lazy=False, **item)
         self.lazy_list.clear()
 
+    @staticmethod
+    def _parse_to_numpy(**kwargs) -> dict:
+        for key, value in kwargs.items():
+            if isinstance(value, torch.Tensor):
+                kwargs[key] = value.detach().cpu().numpy()
+        return kwargs
+
     def add(self, lazy: bool = True, **kwargs) -> None:
+        kwargs = self._parse_to_numpy(**kwargs)
         self._check_shape(kwargs)
         if lazy and len(self.point_cloud.keys()) != 0:
             self.lazy_list.append(kwargs)
