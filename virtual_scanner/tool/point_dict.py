@@ -52,6 +52,10 @@ class PointDict:
             return item in self.data or item in self.meta_data
         return False
 
+    def __str__(self) -> str:
+        return(f'PointDict with primary key: {self.primary_key}, length: {len(self)}, type: {self.type}\n'
+               f'Data keys: {self.data.keys()}, meta keys: {self.meta_data.keys()}\n')
+
     def length_check(self):
         assert self.primary_key in self.data
         point_length = len(self.data[self.primary_key])
@@ -65,6 +69,8 @@ class PointDict:
         new = PointDict(self.primary_key)
         for k, v in self.data.items():
             new.data[k] = v[item]
+        for k, v in self.meta_data.items():
+            new.meta_data[k] = v[item] if isinstance(v, (np.ndarray, torch.Tensor, list)) else v
         return new
 
     def change_type(self, new_type):

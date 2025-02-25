@@ -211,9 +211,14 @@ class PointCloudManager:
         self.point_cloud[indices] = value
 
     def __contains__(self, item) -> bool:
+        self.process_lazy()
         if isinstance(item, str):
             return item in self.point_cloud
         raise NotImplementedError(item)
+
+    def __str__(self) -> str:
+        self.process_lazy()
+        return f'PointCloud({len(self)} points, keys: {", ".join(self.point_cloud.keys())})'
 
     @classmethod
     def from_simple_o3d_pcd(cls, pcd: 'o3d.geometry.PointCloud') -> 'PointCloudManager':
