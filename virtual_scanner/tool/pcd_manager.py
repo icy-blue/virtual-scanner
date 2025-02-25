@@ -1,6 +1,7 @@
 import re
 import sys
 from collections import defaultdict
+from os import PathLike
 
 import open3d as o3d
 import numpy as np
@@ -47,7 +48,7 @@ class PointCloudManager:
         return result
 
     @classmethod
-    def read_o3d_pcd(cls, path: str, verbose: bool = True) -> 'Self':
+    def read_o3d_pcd(cls, path: 'Union[str, PathLike]', verbose: bool = True) -> 'Self':
         if not os.path.exists(path):
             raise FileNotFoundError
         if os.path.getsize(path) == 0:
@@ -141,7 +142,7 @@ class PointCloudManager:
                 pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
         return pcd
 
-    def save(self, path: str, split: bool = True) -> None:
+    def save(self, path: 'Union[str, PathLike]', split: bool = True) -> None:
         self.process_lazy()
         if self.auto_deduplicate:
             old_points = len(self)
