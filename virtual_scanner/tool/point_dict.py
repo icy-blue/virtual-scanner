@@ -25,7 +25,7 @@ class PointDict:
         return self.slice(item)
 
     def __setitem__(self, key, value):
-        if isinstance(value, str) or np.asarray(value).size <= 1:
+        if self._get_size(value) <= 1:
             self.meta_data[key] = value
             return
         if self.type == 'numpy':
@@ -55,6 +55,33 @@ class PointDict:
     def __str__(self) -> str:
         return(f'PointDict with primary key: {self.primary_key}, length: {len(self)}, type: {self.type}\n'
                f'Data keys: {self.data.keys()}, meta keys: {self.meta_data.keys()}\n')
+
+    def _get_size(self, item):
+        if isinstance(item, str):
+            return 1
+        if isinstance(item, torch.Tensor):
+            return item.numel()
+        return np.asarray(item).size
+
+    def gets(self, *args):
+        return (getattr(self, x, None) for x in args)
+
+    def pop(self, *args):
+        for x in args:
+            if x in self.data:
+                self.data.pop(x)
+            elif x in self.meta_data:
+                self.meta_data.pop(x)
+            else:
+                raise KeyError(x)
+
+    def pop_except(self, *args):
+        for k in self.data:
+            if k not in args:
+                self.data.pop(k)
+        for k in self.meta_data:
+            if k not in args:
+                self.meta_data.pop(k)
 
     def length_check(self):
         assert self.primary_key in self.data
