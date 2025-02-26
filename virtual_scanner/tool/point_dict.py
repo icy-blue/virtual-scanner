@@ -64,7 +64,7 @@ class PointDict:
         return np.asarray(item).size
 
     def gets(self, *args):
-        return (getattr(self, x, None) for x in args)
+        return (self.__getitem__(x) for x in args)
 
     def pop(self, *args):
         for x in args:
