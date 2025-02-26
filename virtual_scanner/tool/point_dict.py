@@ -28,18 +28,7 @@ class PointDict:
         if self._get_size(value) <= 1:
             self.meta_data[key] = value
             return
-        if self.type == 'numpy':
-            if isinstance(value, torch.Tensor):
-                value = value.detach().cpu().numpy()
-            elif not isinstance(value, np.ndarray):
-                value = np.array(value)
-        elif self.type[:5] == 'torch':
-            if isinstance(value, np.ndarray):
-                value = torch.from_numpy(value)
-            elif not isinstance(value, torch.Tensor):
-                value = torch.Tensor(value)
-            if self.type == 'torch-cuda':
-                value = value.cuda()
+        value = self._parse_value(value, self.type)
         self.data[key] = value
 
     def __len__(self):
@@ -56,6 +45,25 @@ class PointDict:
         return(f'PointDict with primary key: {self.primary_key}, length: {len(self)}, type: {self.type}\n'
                f'Data keys: {self.data.keys()}, meta keys: {self.meta_data.keys()}\n')
 
+    @staticmethod
+    def _parse_value(value: 'Any', type_: 'str'):
+        if type_ == 'numpy':
+            if isinstance(value, torch.Tensor):
+                return value.detach().cpu().numpy()
+            if isinstance(value, np.ndarray):
+                return value
+            return np.array(value)
+        if type_ == 'torch':
+            if isinstance(value, np.ndarray):
+                value = torch.from_numpy(value)
+            elif not isinstance(value, torch.Tensor):
+                value = torch.Tensor(value)
+            if type_ == 'torch-cuda':
+                value = value.cuda()
+            return value
+        raise TypeError(f'Unsupported type: {type_}')
+
+
     def _get_size(self, item):
         if isinstance(item, str):
             return 1
@@ -63,8 +71,11 @@ class PointDict:
             return item.numel()
         return np.asarray(item).size
 
-    def gets(self, *args):
-        return (self.__getitem__(x) for x in args)
+    def gets(self, *args, type_: 'str' = None):
+        result = [self.__getitem__(x) for x in args]
+        if type_ is not None and type_ != self.type:
+            result = [self._parse_value(v, type_) for v in result]
+        return result
 
     def pop(self, *args):
         for x in args:
