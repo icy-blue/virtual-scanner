@@ -53,7 +53,7 @@ class PointDict:
             if isinstance(value, np.ndarray):
                 return value
             return np.array(value)
-        if type_ == 'torch':
+        if type_[:5] == 'torch':
             if isinstance(value, np.ndarray):
                 value = torch.from_numpy(value)
             elif not isinstance(value, torch.Tensor):
