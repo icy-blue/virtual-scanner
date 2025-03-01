@@ -3,7 +3,7 @@ import numpy as np
 import torch
 from .pcd_manager import PointCloudManager
 if sys.version_info[1] >= 9:
-    from typing import List, Self
+    from typing import List, Self, Any
 
 
 class PointDict:
