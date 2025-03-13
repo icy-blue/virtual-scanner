@@ -1,6 +1,6 @@
 import sys
 import time
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import Tuple, Union, Callable, Sequence, Any
 
 import numpy as np
@@ -29,7 +29,7 @@ class KNN:
         return grid_points, min_bounds, max_bounds
 
     @classmethod
-    def pc_to_tensor(cls, pc: 'Any', device: 'torch.device') -> torch.Tensor:
+    def pc_to_tensor(cls, pc: 'Any', device: 'torch.device') -> 'torch.Tensor':
         if isinstance(pc, np.ndarray):
             return torch.from_numpy(pc)[None, :, :].double().to(device)
         elif isinstance(pc, torch.Tensor):

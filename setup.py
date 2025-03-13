@@ -11,7 +11,7 @@ install_requires += ['tqdm', 'trimesh', 'rtree', 'mitsuba', 'pytorch3d', 'pytz']
 
 setup(
     name="virtual_scanner",
-    version="0.2.0",
+    version="0.2.1",
     author="icy",
     author_email="i@icys.top",
     description="A virtual scanner using open3d",

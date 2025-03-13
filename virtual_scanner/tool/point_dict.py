@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import torch
 from .pcd_manager import PointCloudManager
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import List, Self, Any
 
 
@@ -17,14 +17,16 @@ class PointDict:
         self.primary_key = primary_key
         self.type = _type
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: 'Any'):
         if isinstance(item, str):
             if item in self.data:
                 return self.data[item]
             return self.meta_data[item]
         return self.slice(item)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: 'Any'):
+        if not isinstance(key, str):
+            raise TypeError('key must be str')
         if self._get_size(value) <= 1:
             self.meta_data[key] = value
             return
@@ -36,7 +38,7 @@ class PointDict:
             return 0
         return len(self.data[self.primary_key])
 
-    def __contains__(self, item):
+    def __contains__(self, item: 'Any') -> bool:
         if isinstance(item, str):
             return item in self.data or item in self.meta_data
         return False
@@ -46,7 +48,7 @@ class PointDict:
                f'Data keys: {self.data.keys()}, meta keys: {self.meta_data.keys()}\n')
 
     @staticmethod
-    def _parse_value(value: 'Any', type_: 'str'):
+    def _parse_value(value: 'Any', type_: str):
         if type_ == 'numpy':
             if isinstance(value, torch.Tensor):
                 return value.detach().cpu().numpy()
@@ -64,20 +66,20 @@ class PointDict:
         raise TypeError(f'Unsupported type: {type_}')
 
 
-    def _get_size(self, item):
+    def _get_size(self, item: 'Any') -> int:
         if isinstance(item, str):
             return 1
         if isinstance(item, torch.Tensor):
             return item.numel()
         return np.asarray(item).size
 
-    def gets(self, *args, type_: 'str' = None):
+    def gets(self, *args, type_: 'str' = None) -> 'List[Any]':
         result = [self.__getitem__(x) for x in args]
         if type_ is not None and type_ != self.type:
             result = [self._parse_value(v, type_) for v in result]
         return result
 
-    def pop(self, *args):
+    def pop(self, *args) -> None:
         for x in args:
             if x in self.data:
                 self.data.pop(x)
@@ -86,7 +88,7 @@ class PointDict:
             else:
                 raise KeyError(x)
 
-    def pop_except(self, *args):
+    def pop_except(self, *args) -> None:
         for k in self.data:
             if k not in args:
                 self.data.pop(k)
@@ -94,7 +96,7 @@ class PointDict:
             if k not in args:
                 self.meta_data.pop(k)
 
-    def length_check(self):
+    def length_check(self) -> bool:
         assert self.primary_key in self.data
         point_length = len(self.data[self.primary_key])
         for k, v in self.data.items():
@@ -103,7 +105,7 @@ class PointDict:
                 return False
         return True
 
-    def slice(self, item):
+    def slice(self, item: 'Any') -> 'PointDict':
         new = PointDict(self.primary_key)
         for k, v in self.data.items():
             new.data[k] = v[item]
@@ -111,7 +113,7 @@ class PointDict:
             new.meta_data[k] = v[item] if isinstance(v, (np.ndarray, torch.Tensor, list)) else v
         return new
 
-    def change_type(self, new_type):
+    def change_type(self, new_type: str) -> None:
         assert new_type in ['numpy', 'torch', 'torch-cuda']
         if new_type == self.type:
             return
@@ -119,7 +121,7 @@ class PointDict:
         for k, v in self.data.items():
             self[k] = v
 
-    def to_pcd_manager(self):
+    def to_pcd_manager(self) -> 'PointCloudManager':
         manager = PointCloudManager()
         pos = self[self.primary_key]
         self.data.pop(self.primary_key)
@@ -128,7 +130,7 @@ class PointDict:
         return manager
 
     @classmethod
-    def from_pcd_manager(cls, manager: 'PointCloudManager'):
+    def from_pcd_manager(cls, manager: 'PointCloudManager') -> 'Self':
         point_dict = cls(primary_key='positions')
         manager.process_lazy()
         for k, v in manager.point_cloud.items():

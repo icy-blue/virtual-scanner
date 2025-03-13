@@ -3,7 +3,7 @@ import numpy as np
 import trimesh
 from .lidar import Lidar
 from ..tool import KNN as knn, mitsuba_intersect
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import Tuple
 
 

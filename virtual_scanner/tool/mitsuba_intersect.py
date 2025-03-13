@@ -1,6 +1,6 @@
 import tempfile
 import sys
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import Tuple, Any
 import numpy as np
 import trimesh

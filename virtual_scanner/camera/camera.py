@@ -1,7 +1,10 @@
-from typing import Tuple
+import sys
 
 import numpy as np
 import open3d as o3d
+
+if sys.version_info[1] >= 11:
+    from typing import Tuple
 
 
 class Camera:
@@ -13,13 +16,13 @@ class Camera:
         self.eye = eye
         self.up = up
 
-    def get_focal_length(self):
+    def get_focal_length(self) -> float:
         width, _ = self.resolution
         fov_rad = np.deg2rad(self.fov)
         focal_length = width / (2 * np.tan(fov_rad / 2))
         return focal_length
 
-    def get_extrinsics(self) -> np.ndarray:
+    def get_extrinsics(self) -> 'np.ndarray':
         z_axis = self.center - self.eye
         z_axis = z_axis / np.linalg.norm(z_axis)
 
@@ -35,7 +38,7 @@ class Camera:
 
         return extrinsic_matrix_4x4
 
-    def get_intrinsics(self) -> np.ndarray:
+    def get_intrinsics(self) -> 'np.ndarray':
         width, height = self.resolution
 
         focal_length = self.get_focal_length()
@@ -51,7 +54,7 @@ class Camera:
 
         return K
 
-    def get_o3d_intrinsics(self) -> o3d.camera.PinholeCameraIntrinsic:
+    def get_o3d_intrinsics(self) -> 'o3d.camera.PinholeCameraIntrinsic':
         width, height = self.resolution
 
         focal_length = self.get_focal_length()

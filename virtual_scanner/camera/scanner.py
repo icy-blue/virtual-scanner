@@ -5,7 +5,7 @@ import open3d as o3d
 from open3d.visualization.rendering import MaterialRecord
 
 from .camera import Camera
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import Tuple, List
 
 

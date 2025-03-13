@@ -9,7 +9,7 @@ import math
 
 import torch
 
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import List, Dict, Optional, Self, Union
 import os
 
@@ -211,7 +211,7 @@ class PointCloudManager:
                              f'found {value.shape[0]} != pcd\' length {length}')
         self.point_cloud[indices] = value
 
-    def __contains__(self, item) -> bool:
+    def __contains__(self, item: any) -> bool:
         self.process_lazy()
         if isinstance(item, str):
             return item in self.point_cloud

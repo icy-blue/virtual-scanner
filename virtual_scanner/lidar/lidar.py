@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-if sys.version_info[1] >= 9:
+if sys.version_info[1] >= 11:
     from typing import Tuple
 
 
