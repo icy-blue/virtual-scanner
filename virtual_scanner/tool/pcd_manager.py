@@ -15,15 +15,16 @@ import os
 
 
 class PointCloudManager:
+    PCD_MAX_LENGTH = 2000_0000
     def __init__(self,
-                 split_length: int = 5000_0000,
                  deduplication_precision: float = 1e-6,
-                 auto_deduplicate: bool = True):
+                 auto_deduplicate: bool = True,
+                 default_extension: str = ".pcd"):
         self.point_cloud = {}
-        self.split_length = split_length
         self.lazy_list = []
         self.deduplication_precision = deduplication_precision
         self.auto_deduplicate = auto_deduplicate
+        self.default_extension = default_extension
 
     @classmethod
     def _merge_parts(cls, data: dict):
@@ -152,16 +153,15 @@ class PointCloudManager:
                       f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
                 print(f'Filepath: {path}', file=sys.stderr)
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
-        path = path[:-4] if path.endswith('.pcd') else path
-        block_num = math.ceil(len(self.point_cloud['positions']) / self.split_length)
-        if not split or block_num == 1:
-            pcd = self.to_o3d_tpcd(split)
-            o3d.t.io.write_point_cloud(f"{path}.pcd", pcd)
-            return
-        for i in range(block_num):
-            part = self[(i * self.split_length):((i + 1) * self.split_length)]
-            pcd = part.to_o3d_tpcd(split)
-            o3d.t.io.write_point_cloud(f"{path}_block{i}.pcd", pcd)
+        ext = os.path.splitext(path)[1]
+        if ext == '':
+            path = path + self.default_extension
+        if len(self) > self.PCD_MAX_LENGTH and ext == 'pcd':
+            print(f'Warning: PointCloud with points {len(self)} is too large for Open3D.',
+                  f'Try `.ply` extension if error occurs.\n',
+                  f'See https://github.com/isl-org/Open3D/issues/6607', file=sys.stderr)
+        pcd = self.to_o3d_tpcd(split)
+        o3d.t.io.write_point_cloud(path, pcd)
 
     def slice(self, indices: np.ndarray, update: bool = False) -> 'Self':
         self.process_lazy()
