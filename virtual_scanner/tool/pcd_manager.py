@@ -51,7 +51,7 @@ class PointCloudManager:
     @classmethod
     def read_o3d_pcd(cls, path: 'Union[str, PathLike]', verbose: bool = True) -> 'Self':
         if not os.path.exists(path):
-            raise FileNotFoundError
+            raise FileNotFoundError(path)
         if os.path.getsize(path) == 0:
             raise RuntimeError(f"File {path} is empty.")
         pcd = o3d.t.io.read_point_cloud(path)
