@@ -16,6 +16,7 @@ import os
 
 class PointCloudManager:
     PCD_MAX_LENGTH = 2000_0000
+    DEFAULT_KEYS = ['positions', 'normals', 'colors']
     def __init__(self,
                  deduplication_precision: float = 1e-6,
                  auto_deduplicate: bool = True,
@@ -79,7 +80,10 @@ class PointCloudManager:
     def _parse_to_numpy(**kwargs) -> dict:
         for key, value in kwargs.items():
             if isinstance(value, torch.Tensor):
-                kwargs[key] = value.detach().cpu().numpy()
+                value = value.detach().cpu().numpy()
+            if value.dtype == np.float64 or key in PointCloudManager.DEFAULT_KEYS:
+                value = value.astype(np.float32)
+            kwargs[key] = value
         return kwargs
 
     def add(self, lazy: bool = True, **kwargs) -> None:
@@ -133,7 +137,7 @@ class PointCloudManager:
     def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
         pcd = o3d.t.geometry.PointCloud()
         for key, value in self.point_cloud.items():
-            if key in ['positions', 'normals', 'colors'] or value.shape[1] == 1:
+            if key in self.DEFAULT_KEYS or value.shape[1] == 1:
                 pcd.point[key] = o3d.core.Tensor(value)
                 continue
             if not split:
@@ -145,14 +149,17 @@ class PointCloudManager:
 
     def save(self, path: 'Union[str, PathLike]', split: bool = True) -> None:
         self.process_lazy()
+        old_points = len(self)
         if self.auto_deduplicate:
-            old_points = len(self)
-            indices = self.deduplicate()
-            if len(indices) != old_points:
-                print(f'Warning: {old_points - len(indices)} of {old_points} points are duplicated '
+            self.deduplicate()
+            if len(self) != old_points:
+                print(f'Warning: {old_points - len(self)} of {old_points} points are duplicated '
                       f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
                 print(f'Filepath: {path}', file=sys.stderr)
                 print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
+        invalid_mask = self.find_invalid_mask()
+        if np.sum(invalid_mask) > 0:
+            print(f'Warning: {np.sum(invalid_mask)} of {old_points} points are invalid.', file=sys.stderr)
         ext = os.path.splitext(path)[1]
         if ext == '':
             path = path + self.default_extension
@@ -231,7 +238,7 @@ class PointCloudManager:
             manager.point_cloud['normals'] = np.asarray(pcd.normals)
         return manager
 
-    def deduplicate(self, precision: 'Optional[float]' = None) -> np.ndarray:
+    def deduplicate(self, precision: 'Optional[float]' = None) -> 'np.ndarray':
         if precision is None:
             precision = self.deduplication_precision
         xyz = self['positions']
@@ -242,6 +249,11 @@ class PointCloudManager:
         return indices
 
     def remove_invalid_points(self) -> None:
-        xyz = self['positions']
-        valid_mask = np.isfinite(xyz).all(axis=1)
+        invalid_mask = self.find_invalid_mask()
+        valid_mask = ~invalid_mask
         self.slice(valid_mask, update=True)
+
+    def find_invalid_mask(self) -> 'np.ndarray':
+        xyz = self['positions']
+        invalid_mask = ~np.isfinite(xyz).all(axis=1)
+        return invalid_mask
