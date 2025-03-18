@@ -44,7 +44,7 @@ class PointCloudManager:
             parts.sort()
             for k, v in parts:
                 data.pop(f'{name}_part{k}')
-            result[name] = np.vstack([value for _, value in parts])
+            result[name] = np.hstack([value for _, value in parts])
 
         return result
 
