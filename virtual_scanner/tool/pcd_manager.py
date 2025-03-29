@@ -2,10 +2,10 @@ import re
 import sys
 from collections import defaultdict
 from os import PathLike
+import warnings
 
 import open3d as o3d
 import numpy as np
-import math
 
 import torch
 
@@ -17,10 +17,10 @@ import os
 class PointCloudManager:
     PCD_MAX_LENGTH = 2000_0000
     DEFAULT_KEYS = ['positions', 'normals', 'colors']
-    def __init__(self,
-                 deduplication_precision: float = 1e-6,
-                 auto_deduplicate: bool = True,
-                 default_extension: str = ".pcd"):
+
+    def __init__(
+        self, deduplication_precision: float = 1e-6, auto_deduplicate: bool = True, default_extension: str = ".pcd"
+    ):
         self.point_cloud = {}
         self.lazy_list = []
         self.deduplication_precision = deduplication_precision
@@ -108,8 +108,9 @@ class PointCloudManager:
             if point_length is None:
                 point_length = value.shape[0]
             else:
-                assert point_length == value.shape[0], \
-                    f"The number of points is not the same, {point_length} != {value.shape[0]}"
+                assert (
+                    point_length == value.shape[0]
+                ), f"The number of points is not the same, {point_length} != {value.shape[0]}"
         return point_cloud
 
     def add_batch(self, point_clouds: 'List[Dict[str, np.ndarray]]') -> None:
@@ -118,21 +119,22 @@ class PointCloudManager:
             return
         point_clouds = [self._check_shape(point_cloud) for point_cloud in point_clouds]
         if len(self.point_cloud.keys()) == 0:
-            for key in point_clouds[0].keys():
+            for key in point_clouds[0]:
                 self.point_cloud[key] = np.vstack([point_cloud[key] for point_cloud in point_clouds])
             return
-        assert set(self.point_cloud.keys()) == set(point_clouds[0].keys()), \
-            f"Keys of point clouds are not the same, {self.point_cloud.keys()} != {point_clouds[0].keys()}"
-        for key in self.point_cloud.keys():
-            self.point_cloud[key] = np.vstack([self.point_cloud[key],
-                                               *[point_cloud[key] for point_cloud in point_clouds]])
+        assert set(self.point_cloud.keys()) == set(
+            point_clouds[0].keys()
+        ), f"Keys of point clouds are not the same, {self.point_cloud.keys()} != {point_clouds[0].keys()}"
+        for key in self.point_cloud:
+            self.point_cloud[key] = np.vstack(
+                [self.point_cloud[key], *[point_cloud[key] for point_cloud in point_clouds]]
+            )
         length = None
-        for key in self.point_cloud.keys():
+        for k, v in self.point_cloud:
             if length is None:
-                length = self.point_cloud[key].shape[0]
+                length = v.shape[0]
             else:
-                assert length == self.point_cloud[key].shape[0], \
-                    f"The number of points is not the same, {length} != key {key} {self.point_cloud[key].shape[0]}"
+                assert length == v.shape[0], f"The number of points is not the same, {length} != key {k} {v.shape[0]}"
 
     def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
         pcd = o3d.t.geometry.PointCloud()
@@ -141,10 +143,12 @@ class PointCloudManager:
                 pcd.point[key] = o3d.core.Tensor(value)
                 continue
             if not split:
-                raise ValueError(f'Open3D does not support multi-dimensional tensor （key {key} has shape {value.shape}) '
-                                 'except `positions`, `normals` and `colors`.')
+                raise ValueError(
+                    f'Open3D does not support multi-dimensional tensor (key {key} has shape {value.shape}) '
+                    'except `positions`, `normals` and `colors`.'
+                )
             for i in range(value.shape[1]):
-                pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i:i + 1])
+                pcd.point[f'{key}_part{i}'] = o3d.core.Tensor(value[:, i : i + 1])
         return pcd
 
     def save(self, path: 'Union[str, PathLike]', split: bool = True) -> None:
@@ -153,20 +157,25 @@ class PointCloudManager:
         if self.auto_deduplicate:
             self.deduplicate()
             if len(self) != old_points:
-                print(f'Warning: {old_points - len(self)} of {old_points} points are duplicated '
-                      f'(using precision {self.deduplication_precision}). Auto deduplicating...', file=sys.stderr)
-                print(f'Filepath: {path}', file=sys.stderr)
-                print(f'Set `auto_deduplicate=False` while initializing PointCloudManager to turn off.', file=sys.stderr)
+                warnings.warn(
+                    (f'Warning: {old_points - len(self)} of {old_points} points are duplicated '
+                     f'(using precision {self.deduplication_precision}). Auto deduplicating...\n'
+                     f'Filepath: {path}\n'
+                     f'Set `auto_deduplicate=False` while initializing {self.__class__.__name__} to turn off.'),
+                    UserWarning,
+                )
         invalid_mask = self.find_invalid_mask()
         if np.sum(invalid_mask) > 0:
-            print(f'Warning: {np.sum(invalid_mask)} of {old_points} points are invalid.', file=sys.stderr)
+            warnings.warn(f'Warning: {np.sum(invalid_mask)} of {old_points} points are invalid.', UserWarning)
         ext = os.path.splitext(path)[1]
         if ext == '':
             path = path + self.default_extension
         if len(self) > self.PCD_MAX_LENGTH and ext == 'pcd':
-            print(f'Warning: PointCloud with points {len(self)} is too large for Open3D.',
-                  f'Try `.ply` extension if error occurs.\n',
-                  f'See https://github.com/isl-org/Open3D/issues/6607', file=sys.stderr)
+            warnings.warn(
+                (f'Warning: PointCloud with points {len(self)} is too large for Open3D.'
+                  'Try `.ply` extension if error occurs.\nSee https://github.com/isl-org/Open3D/issues/6607'),
+                UserWarning,
+            )
         pcd = self.to_o3d_tpcd(split)
         o3d.t.io.write_point_cloud(path, pcd)
 
@@ -175,7 +184,7 @@ class PointCloudManager:
         if update:
             for key, value in self.point_cloud.items():
                 self.point_cloud[key] = value[indices]
-            return
+            return self
         sliced = PointCloudManager()
         for key, value in self.point_cloud.items():
             sliced.point_cloud[key] = value[indices]
@@ -214,8 +223,9 @@ class PointCloudManager:
             raise ValueError(f'Indices must be a string but {type(indices)} is given')
         length = len(self)
         if length != value.shape[0]:
-            raise ValueError(f'Value should be same length as point cloud, '
-                             f'found {value.shape[0]} != pcd\' length {length}')
+            raise ValueError(
+                f'Value should be same length as point cloud, found {value.shape[0]} != pcd\' length {length}'
+            )
         self.point_cloud[indices] = value
 
     def __contains__(self, item: any) -> bool:
