@@ -67,6 +67,7 @@ class KNN:
             idx = idx.cpu().numpy()
 
         if verbose:
+            avg_dist = np.mean(dists) # wait knn to finish
             print(
                 f'1nn with shape {pc0.shape[0]}-{pc1.shape[0]} use time',
                 time.time() - tick,
