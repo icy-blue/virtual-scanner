@@ -7,7 +7,11 @@ import warnings
 import open3d as o3d
 import numpy as np
 
-import torch
+TORCH_FOUND = True
+try:
+    import torch
+except ModuleNotFoundError:
+    TORCH_FOUND = False
 
 if sys.version_info[1] >= 11:
     from typing import List, Dict, Optional, Self, Union
@@ -79,7 +83,7 @@ class PointCloudManager:
     @staticmethod
     def _parse_to_numpy(**kwargs) -> dict:
         for key, value in kwargs.items():
-            if isinstance(value, torch.Tensor):
+            if TORCH_FOUND and isinstance(value, torch.Tensor):
                 value = value.detach().cpu().numpy()
             if value.dtype == np.float64 or key in PointCloudManager.DEFAULT_KEYS:
                 value = value.astype(np.float32)
@@ -136,7 +140,7 @@ class PointCloudManager:
             else:
                 assert length == v.shape[0], f"The number of points is not the same, {length} != key {k} {v.shape[0]}"
 
-    def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
+    def to_o3d_tpcd(self, split: bool = True) -> 'o3d.t.geometry.PointCloud':
         pcd = o3d.t.geometry.PointCloud()
         for key, value in self.point_cloud.items():
             if key in self.DEFAULT_KEYS or value.shape[1] == 1:
@@ -248,6 +252,13 @@ class PointCloudManager:
             manager.point_cloud['normals'] = np.asarray(pcd.normals)
         return manager
 
+    @classmethod
+    def from_o3d_tpcd(cls, pcd: 'o3d.geometry.t.PointCloud') -> 'PointCloudManager':
+        manager = cls()
+        for item in pcd.point:
+            manager.point_cloud[item] = pcd.point[item]
+        return manager
+
     def deduplicate(self, precision: 'Optional[float]' = None) -> 'np.ndarray':
         if precision is None:
             precision = self.deduplication_precision
@@ -267,3 +278,21 @@ class PointCloudManager:
         xyz = self['positions']
         invalid_mask = ~np.isfinite(xyz).all(axis=1)
         return invalid_mask
+
+    def farthest_point_downsample(self, n_samples: int, start_index: int = 0, return_index: bool = False):
+        N = len(self)
+        assert N > 0
+        if N <= n_samples:
+            print(f'[Warning] trying to sample {n_samples} from {N} points. Return self.')
+            return self
+        xyz = self['positions']
+        centroids = np.zeros(n_samples, dtype=np.int32)
+        distance = np.ones(N) * 1e10
+        farthest = start_index
+        for i in range(n_samples):
+            centroids[i] = farthest
+            dist = np.sum((xyz - xyz[farthest]) ** 2, axis=1)
+            distance = np.minimum(distance, dist)
+            farthest = np.argmax(distance)
+        result = (self[centroids], centroids) if return_index else self[centroids]
+        return result
