@@ -7,7 +7,11 @@ import warnings
 import open3d as o3d
 import numpy as np
 
-import torch
+TORCH_FOUND = True
+try:
+    import torch
+except ModuleNotFoundError:
+    TORCH_FOUND = False
 
 if sys.version_info[1] >= 11:
     from typing import List, Dict, Optional, Self, Union
@@ -79,7 +83,7 @@ class PointCloudManager:
     @staticmethod
     def _parse_to_numpy(**kwargs) -> dict:
         for key, value in kwargs.items():
-            if isinstance(value, torch.Tensor):
+            if TORCH_FOUND and isinstance(value, torch.Tensor):
                 value = value.detach().cpu().numpy()
             if value.dtype == np.float64 or key in PointCloudManager.DEFAULT_KEYS:
                 value = value.astype(np.float32)
@@ -136,7 +140,7 @@ class PointCloudManager:
             else:
                 assert length == v.shape[0], f"The number of points is not the same, {length} != key {k} {v.shape[0]}"
 
-    def to_o3d_tpcd(self, split: bool) -> 'o3d.t.geometry.PointCloud':
+    def to_o3d_tpcd(self, split: bool = True) -> 'o3d.t.geometry.PointCloud':
         pcd = o3d.t.geometry.PointCloud()
         for key, value in self.point_cloud.items():
             if key in self.DEFAULT_KEYS or value.shape[1] == 1:
@@ -246,6 +250,13 @@ class PointCloudManager:
             manager.point_cloud['colors'] = np.asarray(pcd.colors)
         if len(pcd.normals) > 0:
             manager.point_cloud['normals'] = np.asarray(pcd.normals)
+        return manager
+
+    @classmethod
+    def from_o3d_tpcd(cls, pcd: 'o3d.geometry.t.PointCloud') -> 'PointCloudManager':
+        manager = cls()
+        for item in pcd.point:
+            manager.point_cloud[item] = pcd.point[item]
         return manager
 
     def deduplicate(self, precision: 'Optional[float]' = None) -> 'np.ndarray':
