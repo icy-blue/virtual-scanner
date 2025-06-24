@@ -278,3 +278,21 @@ class PointCloudManager:
         xyz = self['positions']
         invalid_mask = ~np.isfinite(xyz).all(axis=1)
         return invalid_mask
+
+    def farthest_point_downsample(self, n_samples: int, start_index: int = 0, return_index: bool = False):
+        N = len(self)
+        assert N > 0
+        if N <= n_samples:
+            print(f'[Warning] trying to sample {n_samples} from {N} points. Return self.')
+            return self
+        xyz = self['positions']
+        centroids = np.zeros(n_samples, dtype=np.int32)
+        distance = np.ones(N) * 1e10
+        farthest = start_index
+        for i in range(n_samples):
+            centroids[i] = farthest
+            dist = np.sum((xyz - xyz[farthest]) ** 2, axis=1)
+            distance = np.minimum(distance, dist)
+            farthest = np.argmax(distance)
+        result = (self[centroids], centroids) if return_index else self[centroids]
+        return result
